@@ -19,7 +19,7 @@ export const PRIMARY_NAV: NavItem[] = [
   { id: 'classes', label: '班级', href: '/classes', Icon: Boxes },
   { id: 'homework', label: '作业', href: '/homework', Icon: ClipboardList },
   { id: 'data', label: '数据', href: '/data', Icon: BarChart3 },
-  { id: 'materials', label: '资料', href: '/materials', Icon: Files },
+  { id: 'materials', label: '题单与册子', href: '/materials', Icon: Files },
   { id: 'tasks', label: '练习任务', href: '/tasks', Icon: BookOpenCheck },
   { id: 'settings', label: '设置', href: '/settings', Icon: Settings },
 ]

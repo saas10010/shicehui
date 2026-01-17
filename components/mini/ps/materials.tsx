@@ -68,7 +68,7 @@ export function MiniMaterials({ role }: { role: MiniRole }) {
         ))}
         {!jobs.length ? (
           <div className="px-4 py-10 text-center text-sm text-black/50">
-            暂无资料（你可以先在教师端“资料中心”生成一条记录）
+            暂无记录（你可以先在教师端“题单与册子”生成一条记录）
           </div>
         ) : null}
       </WechatCard>
@@ -81,4 +81,3 @@ export function MiniMaterials({ role }: { role: MiniRole }) {
     </div>
   )
 }
-

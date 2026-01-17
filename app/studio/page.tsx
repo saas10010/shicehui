@@ -15,7 +15,7 @@ export default function StudioPage() {
         {[
           { title: '班级列表', desc: '建班/导入/进入班级', href: '/classes' },
           { title: '数据看板', desc: '题目/知识点排行', href: '/data' },
-          { title: '资料中心', desc: '生成与下载（原型）', href: '/materials' },
+          { title: '题单与册子', desc: '生成与下载（原型）', href: '/materials' },
           { title: '练习任务', desc: '创建与完成统计（原型）', href: '/tasks' },
           { title: '设置', desc: '偏好开关（原型）', href: '/settings' },
           { title: '登录页', desc: '演示未登录跳转', href: '/login' },

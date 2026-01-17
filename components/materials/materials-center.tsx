@@ -176,7 +176,7 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
   return (
     <div className="space-y-4">
       <BrutalCard className="p-5">
-        <h1 className="text-2xl font-black">资料中心</h1>
+        <h1 className="text-2xl font-black">题单与册子</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           把学情数据转化为可交付物：全班题单/个人练习册/复习册（FR11/FR12）。
         </p>
@@ -188,7 +188,7 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
             全班题单
           </TabsTrigger>
           <TabsTrigger value="personal" className="rounded-lg data-[state=active]:bg-black data-[state=active]:text-white font-bold">
-            个人资料
+            个人册子
           </TabsTrigger>
           <TabsTrigger value="jobs" className="rounded-lg data-[state=active]:bg-black data-[state=active]:text-white font-bold">
             生成记录（{jobs.length}）
