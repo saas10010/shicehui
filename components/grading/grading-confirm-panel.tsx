@@ -391,7 +391,7 @@ export function GradingConfirmPanel({
 
   return (
     <TooltipProvider>
-      <div className="grid gap-4 md:grid-cols-[320px_1fr]">
+      <div className="grid gap-4 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
       <div className="rounded-2xl border-4 border-black bg-white/70 p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-center justify-between gap-3">
           <div className="text-lg font-black">学生列表</div>
@@ -523,20 +523,20 @@ export function GradingConfirmPanel({
           {active && <StatusBadge status={activeFinalStatus ?? activeDraftStatus} />}
         </div>
 
-        {!active || activeDraftStatus !== '可确认' ? (
-          <div className="mt-4 space-y-3">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px]">
-	            <div className="space-y-4">
-	              <div className="text-sm font-bold">题目/答案区域（初稿）</div>
-                {activeIsConfirmed && (
-                  <div className="rounded-xl border-2 border-black bg-white/60 p-3 text-sm font-bold">
-                    已确认：如需修改，请先点击「撤销确认」。
-                  </div>
+	        {!active || activeDraftStatus !== '可确认' ? (
+	          <div className="mt-4 space-y-3">
+	            <Skeleton className="h-6 w-40" />
+	            <Skeleton className="h-40 w-full" />
+	            <Skeleton className="h-10 w-full" />
+	          </div>
+	        ) : (
+	          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_480px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
+		            <div className="min-w-0 space-y-4">
+		              <div className="text-sm font-bold">题目/答案区域（初稿）</div>
+	                {activeIsConfirmed && (
+	                  <div className="rounded-xl border-2 border-black bg-white/60 p-3 text-sm font-bold">
+	                    已确认：如需修改，请先点击「撤销确认」。
+	                  </div>
                 )}
 	              <div className="space-y-3">
 	                {questions.map((q) => (
@@ -701,11 +701,11 @@ export function GradingConfirmPanel({
                   )}
 	              </div>
             </div>
-            <div className="xl:sticky xl:top-6 xl:self-start">
-              <GradingEvidenceView
-                resetKey={activeStudentId ?? 'no-student'}
-                sourceMode={evidenceSourceMode}
-                onSourceModeChange={setEvidenceSourceMode}
+	            <div className="min-w-0 xl:sticky xl:top-6 xl:self-start">
+	              <GradingEvidenceView
+	                resetKey={activeStudentId ?? 'no-student'}
+	                sourceMode={evidenceSourceMode}
+	                onSourceModeChange={setEvidenceSourceMode}
                 linkageEnabled={evidenceLinkageEnabled}
                 onLinkageEnabledChange={setEvidenceLinkageEnabled}
                 questions={questions.map((q) => ({ id: q.id, title: q.title }))}
