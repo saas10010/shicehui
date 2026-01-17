@@ -182,22 +182,20 @@ export function GradingEvidenceView({
                   aria-label="点击预览大图"
                   title="点击预览大图"
                 >
-                  <div
-                    className="relative origin-top-left"
-                    style={{
-                      transform: `rotate(${rotate}deg)`,
-                      transformOrigin: 'top left',
-                    }}
-                  >
+                  <div className="flex w-full justify-center">
                     <img
                       src={preview.src}
                       alt={preview.label}
                       className="block h-auto w-full cursor-zoom-in select-none"
+                      style={{
+                        transform: `rotate(${rotate}deg)`,
+                        transformOrigin: 'center',
+                      }}
                       draggable={false}
                     />
                   </div>
-	                </button>
-	              </div>
+                </button>
+              </div>
 
 	              {linkageEnabled ? (
 	                <div className="text-xs text-muted-foreground">
