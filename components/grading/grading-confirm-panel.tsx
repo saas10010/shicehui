@@ -58,9 +58,6 @@ type DraftQuestion = {
   correct: boolean
 }
 
-const gradingPendingHelp =
-  '用于把当前学生暂缓处理（例如初稿明显错误/无法确认），后续再处理或重新识别（演示：不持久化）。'
-
 function buildDraftQuestions(): DraftQuestion[] {
   return [
     { id: 'q1', title: '第1题：计算（初稿）', score: 5, correct: false },
@@ -78,13 +75,39 @@ export function GradingConfirmPanel({
   items: BatchStudentItem[]
   defaultStudentId?: string
 }) {
-  const [pendingStudentIds, setPendingStudentIds] = React.useState<Set<string>>(
-    () => new Set(),
-  )
   const [draftStatusByStudentId, setDraftStatusByStudentId] = React.useState<
     Record<string, DraftUIStatus>
   >({})
   const generationTimersRef = React.useRef<Record<string, number>>({})
+
+  function triggerDraftRegenerate(studentId: string) {
+    const now = Date.now()
+    const delay = 1500 + Math.floor(Math.random() * 1200)
+    const readyAt = now + delay
+
+    setDraftStatusByStudentId((prev) => ({ ...prev, [studentId]: '生成中' }))
+
+    const record = safeReadDraftGeneration(batchId)
+    record[studentId] = { readyAt }
+    safeWriteDraftGeneration(batchId, record)
+
+    const existingTimer = generationTimersRef.current[studentId]
+    if (existingTimer) window.clearTimeout(existingTimer)
+
+    generationTimersRef.current[studentId] = window.setTimeout(() => {
+      setDraftStatusByStudentId((prev) => ({ ...prev, [studentId]: '可确认' }))
+      const latest = safeReadDraftGeneration(batchId)
+      const latestV = latest[studentId]
+      if (
+        latestV &&
+        typeof latestV.readyAt === 'number' &&
+        latestV.readyAt <= Date.now()
+      ) {
+        delete latest[studentId]
+        safeWriteDraftGeneration(batchId, latest)
+      }
+    }, delay)
+  }
 
   React.useEffect(() => {
     const now = Date.now()
@@ -167,7 +190,6 @@ export function GradingConfirmPanel({
 	        <div className="mt-3 space-y-2">
 	            {items.map((i) => {
 	              const activeRow = i.studentId === activeStudentId
-	              const isPending = pendingStudentIds.has(i.studentId)
 	              const baseDraftStatus: DraftUIStatus =
 	                i.draftStatus === '处理中' ? '处理中' : '可确认'
 	              const draftStatus: DraftUIStatus =
@@ -182,22 +204,9 @@ export function GradingConfirmPanel({
                 )}
                 onClick={() => setActiveStudentId(i.studentId)}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="truncate">{i.studentName}</div>
-	                    {isPending ? (
-	                      <Tooltip>
-	                        <TooltipTrigger asChild>
-	                          <span className="shrink-0">
-	                            <StatusBadge status="待处理" />
-	                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-80">
-                          {gradingPendingHelp}
-	                        </TooltipContent>
-	                      </Tooltip>
-	                    ) : (
-	                      <StatusBadge status={draftStatus} className="shrink-0" />
-	                    )}
+	                  <div className="flex items-center justify-between gap-2">
+	                    <div className="truncate">{i.studentName}</div>
+	                    <StatusBadge status={draftStatus} className="shrink-0" />
 	                  </div>
                   <div className={cn('mt-1 text-xs', activeRow ? 'text-white/80' : 'text-muted-foreground')}>
                   作业张数：{i.imageCount} · 异常：{i.exceptions}
@@ -222,23 +231,10 @@ export function GradingConfirmPanel({
             <div className="text-sm text-muted-foreground">
               快速纠错：改对错/改分数/补评语（FR7）。
             </div>
-          </div>
-          {active &&
-            (pendingStudentIds.has(active.studentId) ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="shrink-0">
-                    <StatusBadge status="待处理" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-80">
-                  {gradingPendingHelp}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <StatusBadge status={activeDraftStatus} />
-            ))}
-        </div>
+	          </div>
+	          {active &&
+	            <StatusBadge status={activeDraftStatus} />}
+	        </div>
 
         {!active || activeDraftStatus !== '可确认' ? (
           <div className="mt-4 space-y-3">
@@ -337,33 +333,31 @@ export function GradingConfirmPanel({
                 />
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="rounded-xl border-2 border-black font-bold"
-                      onClick={() => {
-                        if (!activeStudentId) return
-                        setPendingStudentIds((prev) => {
-                          const next = new Set(prev)
-                          next.add(activeStudentId)
-                          return next
-                        })
-                        toast.message('已标记为待处理（原型未持久化）')
-                      }}
-                    >
-                      标记待处理
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-80">
-                    {gradingPendingHelp}
-                  </TooltipContent>
-                </Tooltip>
-                <Button
-                  className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  onClick={() => toast.success('已保存并确认（原型未持久化）')}
-                >
+	              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl border-2 border-black font-bold"
+                        onClick={() => {
+                          if (!activeStudentId) return
+                          triggerDraftRegenerate(activeStudentId)
+                          setQuestions(buildDraftQuestions())
+                          setComment('')
+                          toast.success('已触发重新识别，正在生成初稿（原型）')
+                        }}
+                      >
+                        重新识别（原型）
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-80">
+                      原型说明：触发一次“重新识别/重算初稿”演示，状态会短暂变为「生成中」。
+                    </TooltipContent>
+                  </Tooltip>
+	                <Button
+	                  className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+	                  onClick={() => toast.success('已保存并确认（原型未持久化）')}
+	                >
                   确认保存（Enter 待实现）
                 </Button>
               </div>
