@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 
 import { BrutalCard } from '@/components/brutal/brutal-card'
 import { ClassSubnav } from '@/components/classes/class-subnav'
+import { Button } from '@/components/ui/button'
 import { getClassById } from '@/lib/mock/queries'
 
 export default async function ClassLayout({
@@ -28,7 +30,17 @@ export default async function ClassLayout({
               {classInfo.grade} · {classInfo.studentCount} 人
             </div>
           </div>
-          <ClassSubnav classId={classId} />
+          <div className="flex flex-col gap-2 md:items-end">
+            <Button
+              asChild
+              className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <Link href={`/data?classId=${encodeURIComponent(classId)}`}>
+                进入班级看板
+              </Link>
+            </Button>
+            <ClassSubnav classId={classId} />
+          </div>
         </div>
       </BrutalCard>
 
