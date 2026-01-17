@@ -10,6 +10,7 @@ export function StatusBadge({
     | '上传中'
     | '处理中'
     | '待处理'
+    | '已确认'
     | '已完成'
     | '失败'
     | '可确认'
@@ -21,7 +22,7 @@ export function StatusBadge({
   const variant =
     status === '失败' || status === '需处理'
       ? 'destructive'
-    : status === '已完成' || status === '可确认'
+    : status === '已完成' || status === '已确认' || status === '可确认'
         ? 'default'
         : status === '待处理' || status === '生成中' || status === '进行中'
           ? 'secondary'
