@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { BrutalCard } from '@/components/brutal/brutal-card'
@@ -25,6 +26,14 @@ export default async function GradingConfirmPage({
       <BrutalCard className="p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
+            <div className="text-sm text-muted-foreground">
+              <Link
+                href={`/classes/${classId}/batches/${batchId}`}
+                className="underline underline-offset-4"
+              >
+                返回批次详情
+              </Link>
+            </div>
             <h1 className="text-2xl font-black">批改确认</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               对批改初稿进行低成本纠错与确认，形成最终批改记录（FR6/FR7）。
