@@ -41,16 +41,26 @@ function buildDraftQuestions(): DraftQuestion[] {
 
 export function GradingConfirmPanel({
   items,
+  defaultStudentId,
 }: {
   items: BatchStudentItem[]
+  defaultStudentId?: string
 }) {
   const [pendingStudentIds, setPendingStudentIds] = React.useState<Set<string>>(
     () => new Set(),
   )
 
-  const [activeStudentId, setActiveStudentId] = React.useState(
-    items.find((i) => i.draftStatus === '可确认')?.studentId ?? items[0]?.studentId,
-  )
+  const [activeStudentId, setActiveStudentId] = React.useState(() => {
+    const requested =
+      defaultStudentId && items.some((i) => i.studentId === defaultStudentId)
+        ? defaultStudentId
+        : null
+    return (
+      requested ??
+      items.find((i) => i.draftStatus === '可确认')?.studentId ??
+      items[0]?.studentId
+    )
+  })
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
   const [questions, setQuestions] = React.useState<DraftQuestion[]>(

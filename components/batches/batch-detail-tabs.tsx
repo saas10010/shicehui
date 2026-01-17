@@ -3,6 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
 import type { BatchExceptionItem, BatchStudentItem, Student } from '@/lib/mock/types'
@@ -41,6 +42,7 @@ export function BatchDetailTabs({
   exceptions: BatchExceptionItem[]
 }) {
   const [selected, setSelected] = React.useState<Record<string, string>>({})
+  const router = useRouter()
 
   // 最终归属（原型）：一个异常条目只能归属到一个学生；
   // 学生卡片中的“已归属异常”由异常条目的归属选择实时计算得出。
@@ -138,13 +140,35 @@ export function BatchDetailTabs({
                     >
                       <Link href={`/students/${item.studentId}`}>打开档案</Link>
                     </Button>
-                    <Button
-                      className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                      onClick={() => toast.message('原型：已标记并进入下一位（占位）')}
-                      disabled={item.draftStatus !== '可确认'}
-                    >
-                      快速确认
-                    </Button>
+                    {item.draftStatus !== '可确认' ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              disabled
+                            >
+                              快速确认
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-80">
+                          仅“可确认”状态可快速确认；当前状态为「{item.draftStatus}」。
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                        onClick={() => {
+                          toast.success(`已快速确认：${item.studentName}（原型）`)
+                          router.push(
+                            `/classes/${classId}/batches/${batchId}/grading?studentId=${item.studentId}`,
+                          )
+                        }}
+                      >
+                        快速确认
+                      </Button>
+                    )}
                   </div>
                 </div>
               )

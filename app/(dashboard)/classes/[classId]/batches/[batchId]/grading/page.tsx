@@ -11,10 +11,19 @@ import {
 
 export default async function GradingConfirmPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ classId: string; batchId: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const { classId, batchId } = await params
+  const sp = (await searchParams) ?? {}
+  const requestedStudentId =
+    typeof sp.studentId === 'string'
+      ? sp.studentId
+      : Array.isArray(sp.studentId)
+        ? sp.studentId[0]
+        : undefined
   const classInfo = getClassById(classId)
   const batch = getBatchById(batchId)
   if (!classInfo || !batch || batch.classId !== classId) notFound()
@@ -45,7 +54,7 @@ export default async function GradingConfirmPage({
         </div>
       </BrutalCard>
 
-      <GradingConfirmPanel items={items} />
+      <GradingConfirmPanel items={items} defaultStudentId={requestedStudentId} />
     </div>
   )
 }
