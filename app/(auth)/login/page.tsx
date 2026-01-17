@@ -6,6 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
+function safeNextPathOrEmpty(raw: string) {
+  const value = raw.trim()
+  if (!value) return ''
+  if (!value.startsWith('/')) return ''
+  if (value.startsWith('//')) return ''
+  return value
+}
+
 async function loginAction(formData: FormData) {
   'use server'
 
@@ -19,17 +27,21 @@ async function loginAction(formData: FormData) {
     sameSite: 'lax',
   })
 
-  const safeNext =
-    nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : '/classes'
+  const safeNext = safeNextPathOrEmpty(nextPath) || '/classes'
   redirect(safeNext)
 }
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const nextPath = typeof searchParams.next === 'string' ? searchParams.next : ''
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const nextRaw =
+    typeof resolvedSearchParams.next === 'string'
+      ? resolvedSearchParams.next
+      : ''
+  const nextPath = safeNextPathOrEmpty(nextRaw)
   return (
     <div className="mx-auto max-w-md">
       <div className="rounded-2xl border-4 border-black bg-white/70 p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
