@@ -1,12 +1,12 @@
 import { MiniMe } from '@/components/mini/ps/me'
 import { safeRole } from '@/lib/mini/ps'
 
-export default function PsMePage({
+export default async function PsMePage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const role = safeRole(searchParams.role)
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const role = safeRole(resolvedSearchParams.role)
   return <MiniMe role={role} />
 }
-

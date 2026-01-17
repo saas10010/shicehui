@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { getClassById, getStudentsByClassId } from '@/lib/mock/queries'
+import { buildAttachmentContentDisposition } from '@/lib/http/content-disposition'
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
@@ -48,9 +49,11 @@ export async function GET(request: Request) {
   const response = new NextResponse(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      'content-disposition': `attachment; filename="${classInfo.name}-qrcodes-prototype.html"`,
+      'content-disposition': buildAttachmentContentDisposition({
+        utf8Filename: `${classInfo.name}-qrcodes-prototype.html`,
+        fallbackFilename: `class-${classId}-qrcodes-prototype.html`,
+      }),
     },
   })
   return response
 }
-

@@ -1,12 +1,12 @@
 import { MiniTasks } from '@/components/mini/ps/tasks'
 import { safeRole } from '@/lib/mini/ps'
 
-export default function PsTasksPage({
+export default async function PsTasksPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const role = safeRole(searchParams.role)
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const role = safeRole(resolvedSearchParams.role)
   return <MiniTasks role={role} />
 }
-

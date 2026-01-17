@@ -11,12 +11,12 @@ import {
   getWrongQuestionsByStudent,
 } from '@/lib/mock/queries'
 
-export default function StudentProfilePage({
+export default async function StudentProfilePage({
   params,
 }: {
-  params: { studentId: string }
+  params: Promise<{ studentId: string }>
 }) {
-  const { studentId } = params
+  const { studentId } = await params
   const student = getStudentById(studentId)
   if (!student) notFound()
 
@@ -155,4 +155,3 @@ export default function StudentProfilePage({
     </div>
   )
 }
-

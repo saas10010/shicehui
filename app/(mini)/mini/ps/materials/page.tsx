@@ -1,12 +1,12 @@
 import { MiniMaterials } from '@/components/mini/ps/materials'
 import { safeRole } from '@/lib/mini/ps'
 
-export default function PsMaterialsPage({
+export default async function PsMaterialsPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const role = safeRole(searchParams.role)
+  const resolvedSearchParams = searchParams ? await searchParams : {}
+  const role = safeRole(resolvedSearchParams.role)
   return <MiniMaterials role={role} />
 }
-
