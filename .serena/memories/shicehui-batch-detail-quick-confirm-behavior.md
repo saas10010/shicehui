@@ -5,7 +5,7 @@
 
 ## 当前实现
 - `components/batches/batch-detail-tabs.tsx`
-  - 当学生 `draftStatus !== '可确认'`：按钮 disabled，并提供 tooltip 说明原因（避免“点了没反应”的误解）。
+  - 当学生初稿状态不是「可确认」：按钮 disabled，并提供 tooltip 说明原因（避免“点了没反应”的误解）。
   - 当学生 `draftStatus === '可确认'`：点击后 toast 提示，并跳转到批改确认页：
     - 路径：`/classes/${classId}/batches/${batchId}/grading?studentId=${studentId}`
 - `app/(dashboard)/classes/[classId]/batches/[batchId]/grading/page.tsx`

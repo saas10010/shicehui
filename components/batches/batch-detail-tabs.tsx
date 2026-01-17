@@ -25,9 +25,6 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
-const draftStatusNeedsAttentionHelp =
-  '该学生存在异常需先处理（缺码/识别冲突/码损坏等），处理后再确认。'
-
 export function BatchDetailTabs({
   classId,
   batchId,
@@ -41,26 +38,46 @@ export function BatchDetailTabs({
   studentItems: BatchStudentItem[]
   exceptions: BatchExceptionItem[]
 }) {
+  // 异常归属（原型）：
+  // - `selected`：当前页面上正在编辑的归属选择
+  // - `saved`：点击“保存修正”后确认的最终归属（刷新会丢失，但用于演示“最终归属口径”）
   const [selected, setSelected] = React.useState<Record<string, string>>({})
+  const [saved, setSaved] = React.useState<Record<string, string>>({})
   const router = useRouter()
 
+  function isSameAssignment(
+    a: Record<string, string>,
+    b: Record<string, string>,
+  ) {
+    const aKeys = Object.keys(a)
+    const bKeys = Object.keys(b)
+    if (aKeys.length !== bKeys.length) return false
+    for (const key of aKeys) {
+      if (a[key] !== b[key]) return false
+    }
+    return true
+  }
+
   // 最终归属（原型）：一个异常条目只能归属到一个学生；
-  // 学生卡片中的“已归属异常”由异常条目的归属选择实时计算得出。
+  // 学生卡片中的“已归属异常”由“已保存”的最终归属计算得出，避免和未保存的选择混淆。
   const assignedExceptionCounts = React.useMemo(() => {
     const counts: Record<string, number> = {}
     for (const e of exceptions) {
-      const studentId = selected[e.id]
+      const studentId = saved[e.id]
       if (!studentId) continue
       counts[studentId] = (counts[studentId] ?? 0) + 1
     }
     return counts
-  }, [exceptions, selected])
+  }, [exceptions, saved])
 
   const assignedExceptionsTotal = React.useMemo(() => {
     return Object.values(assignedExceptionCounts).reduce((sum, n) => sum + n, 0)
   }, [assignedExceptionCounts])
 
   const unassignedExceptionsTotal = exceptions.length - assignedExceptionsTotal
+  const hasUnsavedChanges = React.useMemo(() => {
+    return !isSameAssignment(selected, saved)
+  }, [saved, selected])
 
   return (
     <TooltipProvider>
@@ -83,11 +100,12 @@ export function BatchDetailTabs({
         <TabsContent value="students">
           <div className="flex items-center justify-between gap-3">
             <div className="text-sm text-muted-foreground">
-              说明：可按学生查看处理状态；异常按“最终归属”统计（在异常 Tab 里选择归属后会实时更新）。
+              说明：可按学生查看处理状态；异常按“最终归属”统计（在异常 Tab 里保存后更新）。
               {exceptions.length > 0 && (
                 <span className="ml-2">
-                  归属进度：已归属 {assignedExceptionsTotal}/{exceptions.length}
-                  （未归属 {unassignedExceptionsTotal}）
+                  归属进度：已保存 {assignedExceptionsTotal}/{exceptions.length}
+                  （未保存 {unassignedExceptionsTotal}）
+                  {hasUnsavedChanges && <span> · 有未保存修改</span>}
                 </span>
               )}
             </div>
@@ -104,6 +122,11 @@ export function BatchDetailTabs({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {studentItems.map((item) => {
               const assignedCount = assignedExceptionCounts[item.studentId] ?? 0
+              // 学生 Tab 不展示“需处理”，该概念只在异常处理流程里体现：
+              // - 初稿状态：处理中 / 可确认（来自 mock，用于演示“初稿是否生成可看”）
+              // - 异常是否处理完：在页头展示“已保存归属/未保存”进度作为提示
+              const draftDisplayStatus =
+                item.draftStatus === '处理中' ? '处理中' : '可确认'
               return (
                 <div
                   key={item.studentId}
@@ -116,20 +139,7 @@ export function BatchDetailTabs({
                         作业张数：{item.imageCount} · 已归属异常：{assignedCount}
                       </div>
                     </div>
-                    {item.draftStatus === '需处理' ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="shrink-0">
-                            <StatusBadge status={item.draftStatus} />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-80">
-                          {draftStatusNeedsAttentionHelp}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <StatusBadge status={item.draftStatus} />
-                    )}
+                    <StatusBadge status={draftDisplayStatus} />
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -140,7 +150,7 @@ export function BatchDetailTabs({
                     >
                       <Link href={`/students/${item.studentId}`}>打开档案</Link>
                     </Button>
-                    {item.draftStatus !== '可确认' ? (
+                    {draftDisplayStatus !== '可确认' ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex">
@@ -153,13 +163,18 @@ export function BatchDetailTabs({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-80">
-                          仅“可确认”状态可快速确认；当前状态为「{item.draftStatus}」。
+                          仅“可确认”状态可快速确认；当前状态为「{draftDisplayStatus}」。
                         </TooltipContent>
                       </Tooltip>
                     ) : (
                       <Button
                         className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                         onClick={() => {
+                          if (unassignedExceptionsTotal > 0) {
+                            toast.message(
+                              `该批次还有 ${unassignedExceptionsTotal} 条异常未完成最终归属，仍可先查看批改确认（原型）`,
+                            )
+                          }
                           toast.success(`已快速确认：${item.studentName}（原型）`)
                           router.push(
                             `/classes/${classId}/batches/${batchId}/grading?studentId=${item.studentId}`,
@@ -185,12 +200,18 @@ export function BatchDetailTabs({
               <Button
                 className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 onClick={() => {
-                  if (unassignedExceptionsTotal > 0) {
+                  const selectedAssignedTotal = Object.values(selected).filter(
+                    Boolean,
+                  ).length
+                  const selectedUnassignedTotal =
+                    exceptions.length - selectedAssignedTotal
+                  if (selectedUnassignedTotal > 0) {
                     toast.message(
-                      `还有 ${unassignedExceptionsTotal} 条异常未归属，建议先完成归属再保存（原型）`,
+                      `还有 ${selectedUnassignedTotal} 条异常未归属，建议先完成归属再保存（原型）`,
                     )
                     return
                   }
+                  setSaved(selected)
                   toast.success('已保存归属修正（原型未持久化）')
                 }}
               >
@@ -200,8 +221,8 @@ export function BatchDetailTabs({
                 variant="outline"
                 className="rounded-xl border-2 border-black font-bold"
                 onClick={() => {
-                  setSelected({})
-                  toast.message('已撤销本页选择（原型）')
+                  setSelected(saved)
+                  toast.message('已撤销未保存修改（原型）')
                 }}
               >
                 撤销选择
@@ -211,9 +232,13 @@ export function BatchDetailTabs({
 
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {exceptions.map((e) => {
-              const assignedStudentId = selected[e.id]
-              const assignedStudent = assignedStudentId
-                ? students.find((s) => s.id === assignedStudentId) ?? null
+              const savedStudentId = saved[e.id]
+              const savedStudent = savedStudentId
+                ? students.find((s) => s.id === savedStudentId) ?? null
+                : null
+              const selectedStudentId = selected[e.id]
+              const selectedStudent = selectedStudentId
+                ? students.find((s) => s.id === selectedStudentId) ?? null
                 : null
 
               return (
@@ -237,17 +262,20 @@ export function BatchDetailTabs({
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         异常ID：{e.id}
-                        {assignedStudent && (
+                        {savedStudent && (
                           <span className="ml-2">
-                            · 已归属：{assignedStudent.name}（#{assignedStudent.code}）
+                            · 已保存归属：{savedStudent.name}（#{savedStudent.code}）
                           </span>
+                        )}
+                        {!savedStudent && selectedStudent && (
+                          <span className="ml-2">· 未保存归属：{selectedStudent.name}</span>
                         )}
                       </div>
 
                       <div className="mt-3">
                         <div className="text-sm font-bold">归属到学生</div>
                         <Select
-                          value={selected[e.id] ?? ''}
+                          value={selected[e.id] ?? saved[e.id] ?? ''}
                           onValueChange={(v) =>
                             setSelected((prev) => ({ ...prev, [e.id]: v }))
                           }

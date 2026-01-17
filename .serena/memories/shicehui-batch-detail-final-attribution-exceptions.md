@@ -5,9 +5,9 @@
 
 ## 当前实现（原型）
 - `components/batches/batch-detail-tabs.tsx`
-  - 异常 Tab：每条异常通过 Select 选择归属学生，状态存入 `selected[exceptionId] = studentId`。
-  - 学生 Tab：学生卡片显示「已归属异常」= 当前页面已被归属到该学生的异常条目数量（由 `selected` + `exceptions` 实时计算）。
-  - 保存按钮：若仍有未归属异常，会提示先完成归属（原型未持久化）。
+  - 异常 Tab：每条异常通过 Select 选择归属学生，编辑态存入 `selected[exceptionId] = studentId`；点击“保存修正”后把 `selected` 作为最终归属写入 `saved`（原型不持久化）。
+  - 学生 Tab：学生卡片显示「已归属异常」= 依据 `saved` 统计到该学生的异常条目数量（最终归属口径）。
+  - 保存按钮：若仍有未归属异常，会提示先完成归属再保存。
 
 ## 说明
 - 该归属状态目前仅在页面内生效（刷新会丢失），用于演示“最终归属口径如何驱动学生异常统计”。
