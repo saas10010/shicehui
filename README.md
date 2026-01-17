@@ -32,3 +32,62 @@ pnpm dev
 ```
 
 然后打开 `http://localhost:3000`。
+
+## 部署到 Vercel
+
+### 方式一：通过 GitHub 集成部署（推荐）
+
+1. **推送代码到 GitHub**
+   ```bash
+   git add .
+   git commit -m "Initial commit"
+   git push
+   ```
+
+2. **登录 Vercel**
+   - 访问 [Vercel](https://vercel.com) 并用 GitHub 账号登录
+
+3. **导入项目**
+   - 点击 "Add New..." → "Project"
+   - 选择你的 GitHub 仓库
+   - Vercel 会自动检测为 Next.js 项目
+
+4. **配置项目**
+   - Framework Preset: `Next.js`（自动识别）
+   - Root Directory: `.`（默认）
+   - Build Command: `pnpm build` 或 `next build`
+   - Output Directory: `.next`
+
+5. **部署**
+   - 点击 "Deploy"，Vercel 会自动构建并部署
+
+6. **访问应用**
+   - 部署完成后会生成一个 `.vercel.app` 域名
+
+### 方式二：通过 Vercel CLI 部署
+
+```bash
+# 安装 Vercel CLI
+pnpm add -g vercel
+
+# 登录 Vercel
+vercel login
+
+# 部署项目（首次部署会引导配置）
+vercel
+
+# 生产环境部署
+vercel --prod
+```
+
+### 环境变量配置
+
+如果在项目中使用到环境变量，需要在 Vercel 控制台中配置：
+
+1. 进入 Vercel 控制台 → 你的项目 → Settings → Environment Variables
+2. 添加所需的环境变量（如 `NEXT_PUBLIC_API_URL` 等）
+3. 重新部署项目使配置生效
+
+### 预览部署
+
+每次提交代码到 GitHub，Vercel 会自动创建预览部署，可通过 PR 中的链接查看效果。
