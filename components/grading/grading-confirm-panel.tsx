@@ -550,13 +550,13 @@ export function GradingConfirmPanel({
                       activeQuestionId === q.id ? 'ring-2 ring-black' : '',
                     )}
                   >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="font-bold">{q.title}</div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-9 rounded-xl border-2 border-black px-3 text-xs font-bold"
+	                    <div className="flex flex-col gap-2">
+	                      <div className="font-bold">{q.title}</div>
+	                      <div className="flex flex-wrap items-center justify-end gap-2">
+	                        <Button
+	                          type="button"
+	                          variant="outline"
+	                          className="h-9 rounded-xl border-2 border-black px-3 text-xs font-bold"
                           onClick={() => setActiveQuestionId(q.id)}
                         >
                           查看证据
