@@ -9,7 +9,6 @@ import { StatusBadge } from '@/components/status-badge'
 import {
   type EvidenceByQuestionId,
   type EvidencePage,
-  type EvidenceSourceMode,
   GradingEvidenceView,
 } from '@/components/grading/grading-evidence-view'
 import { Button } from '@/components/ui/button'
@@ -37,33 +36,28 @@ function getGradingEvidenceSettingsKey(batchId: string) {
   return `shicehui:grading-evidence-settings:${batchId}`
 }
 
-function safeReadGradingEvidenceSettings(batchId: string): {
-  sourceMode: EvidenceSourceMode
-  linkageEnabled: boolean
-} {
+function safeReadGradingEvidenceSettings(batchId: string): { linkageEnabled: boolean } {
   if (typeof window === 'undefined') {
-    return { sourceMode: '整份作业', linkageEnabled: true }
+    return { linkageEnabled: true }
   }
   try {
     const raw = window.sessionStorage.getItem(getGradingEvidenceSettingsKey(batchId))
-    if (!raw) return { sourceMode: '整份作业', linkageEnabled: true }
+    if (!raw) return { linkageEnabled: true }
     const parsed = JSON.parse(raw) as unknown
     if (!parsed || typeof parsed !== 'object') {
-      return { sourceMode: '整份作业', linkageEnabled: true }
+      return { linkageEnabled: true }
     }
-    const p = parsed as { sourceMode?: unknown; linkageEnabled?: unknown }
-    const sourceMode: EvidenceSourceMode =
-      p.sourceMode === '按题证据' ? '按题证据' : '整份作业'
+    const p = parsed as { linkageEnabled?: unknown }
     const linkageEnabled = p.linkageEnabled === false ? false : true
-    return { sourceMode, linkageEnabled }
+    return { linkageEnabled }
   } catch {
-    return { sourceMode: '整份作业', linkageEnabled: true }
+    return { linkageEnabled: true }
   }
 }
 
 function safeWriteGradingEvidenceSettings(
   batchId: string,
-  v: { sourceMode: EvidenceSourceMode; linkageEnabled: boolean },
+  v: { linkageEnabled: boolean },
 ) {
   if (typeof window === 'undefined') return
   try {
@@ -167,8 +161,6 @@ export function GradingConfirmPanel({
   const draftEditsRef = React.useRef<Record<string, DraftEdits>>({})
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
-  const [evidenceSourceMode, setEvidenceSourceMode] =
-    React.useState<EvidenceSourceMode>('整份作业')
   const [evidenceLinkageEnabled, setEvidenceLinkageEnabled] = React.useState(true)
   const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(() => {
     return buildDraftQuestions()[0]?.id ?? null
@@ -266,16 +258,14 @@ export function GradingConfirmPanel({
 
   React.useEffect(() => {
     const v = safeReadGradingEvidenceSettings(batchId)
-    setEvidenceSourceMode(v.sourceMode)
     setEvidenceLinkageEnabled(v.linkageEnabled)
   }, [batchId])
 
   React.useEffect(() => {
     safeWriteGradingEvidenceSettings(batchId, {
-      sourceMode: evidenceSourceMode,
       linkageEnabled: evidenceLinkageEnabled,
     })
-  }, [batchId, evidenceLinkageEnabled, evidenceSourceMode])
+  }, [batchId, evidenceLinkageEnabled])
 
   const [activeStudentId, setActiveStudentId] = React.useState(() => {
     const requested =
@@ -355,36 +345,12 @@ export function GradingConfirmPanel({
     return {
       q1: {
         pageIndex: clamp(0),
-        boxes: [{ x: 8, y: 30, w: 84, h: 10, label: '第1题区域（原型高亮）' }],
-        items: [
-          {
-            id: 'q1-1',
-            label: '证据1（裁切）',
-            src: '/evidence/crop-q1.svg',
-          },
-        ],
       },
       q2: {
         pageIndex: clamp(0),
-        boxes: [{ x: 8, y: 45, w: 84, h: 10, label: '第2题区域（原型高亮）' }],
-        items: [
-          {
-            id: 'q2-1',
-            label: '证据1（裁切）',
-            src: '/evidence/crop-q2.svg',
-          },
-        ],
       },
       q3: {
         pageIndex: clamp(1),
-        boxes: [{ x: 8, y: 30, w: 84, h: 16, label: '第3题区域（原型高亮）' }],
-        items: [
-          {
-            id: 'q3-1',
-            label: '证据1（裁切）',
-            src: '/evidence/crop-q3.svg',
-          },
-        ],
       },
     }
   }, [evidencePages.length])
@@ -705,15 +671,13 @@ export function GradingConfirmPanel({
                   )}
 	              </div>
             </div>
-	            <div className="min-w-0 xl:sticky xl:top-6 xl:self-start">
-	              <GradingEvidenceView
-	                resetKey={activeStudentId ?? 'no-student'}
-	                sourceMode={evidenceSourceMode}
-	                onSourceModeChange={setEvidenceSourceMode}
-                linkageEnabled={evidenceLinkageEnabled}
-                onLinkageEnabledChange={setEvidenceLinkageEnabled}
-                questions={questions.map((q) => ({ id: q.id, title: q.title }))}
-                activeQuestionId={activeQuestionId}
+		            <div className="min-w-0 xl:sticky xl:top-6 xl:self-start">
+		              <GradingEvidenceView
+		                resetKey={activeStudentId ?? 'no-student'}
+	                linkageEnabled={evidenceLinkageEnabled}
+	                onLinkageEnabledChange={setEvidenceLinkageEnabled}
+	                questions={questions.map((q) => ({ id: q.id, title: q.title }))}
+	                activeQuestionId={activeQuestionId}
                 onActiveQuestionIdChange={setActiveQuestionId}
                 pages={evidencePages}
                 evidenceByQuestionId={evidenceByQuestionId}
