@@ -389,6 +389,9 @@ export function GradingConfirmPanel({
     }
   }, [evidencePages.length])
 
+  const actionButtonClassName =
+    'h-10 w-full rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+
   return (
     <TooltipProvider>
       <div className="grid gap-4 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
@@ -623,18 +626,18 @@ export function GradingConfirmPanel({
                   placeholder="例如：第3题注意列式，移项要变号。"
                   disabled={activeIsConfirmed}
                 />
-              </div>
+	              </div>
 
-	              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+	              <div className="flex flex-col gap-2">
 	                  <Tooltip>
-	                    <TooltipTrigger asChild>
-	                      <Button
-	                        variant="outline"
-	                        className="rounded-xl border-2 border-black font-bold"
-		                        onClick={() => {
-		                          if (!activeStudentId) return
-		                          setConfirmedStudentIds((prev) => {
-		                            const next = new Set(prev)
+		                    <TooltipTrigger asChild>
+		                      <Button
+		                        variant="outline"
+		                        className={actionButtonClassName}
+			                        onClick={() => {
+			                          if (!activeStudentId) return
+			                          setConfirmedStudentIds((prev) => {
+			                            const next = new Set(prev)
 		                            next.delete(activeStudentId)
 		                            safeWriteGradingConfirmed(batchId, next)
 		                            return next
@@ -652,18 +655,19 @@ export function GradingConfirmPanel({
 	                        disabled={!activeStudentId}
 	                      >
 	                        重新识别
-	                      </Button>
-	                    </TooltipTrigger>
-	                    <TooltipContent side="top" className="max-w-80">
-	                      原型说明：触发一次“重新识别/重算初稿”演示，状态会短暂变为「生成中」。
-	                    </TooltipContent>
-	                  </Tooltip>
-		                <Button
-		                  className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-			                  onClick={() => {
-			                    if (!activeStudentId) return
-			                    draftEditsRef.current[activeStudentId] = { questions, comment }
-			                    setConfirmedStudentIds((prev) => {
+		                      </Button>
+		                    </TooltipTrigger>
+		                    <TooltipContent side="top" className="max-w-80">
+		                      原型说明：触发一次“重新识别/重算初稿”演示，状态会短暂变为「生成中」。
+		                    </TooltipContent>
+		                  </Tooltip>
+			                <Button
+			                  variant="outline"
+			                  className={actionButtonClassName}
+				                  onClick={() => {
+				                    if (!activeStudentId) return
+				                    draftEditsRef.current[activeStudentId] = { questions, comment }
+				                    setConfirmedStudentIds((prev) => {
 			                      const next = new Set(prev)
 			                      next.add(activeStudentId)
 			                      safeWriteGradingConfirmed(batchId, next)
@@ -676,19 +680,19 @@ export function GradingConfirmPanel({
 		                    })
 		                    toast.success('已保存，状态已更新为「已确认」（原型未持久化）')
 		                  }}
-		                  disabled={!activeStudentId || activeIsConfirmed}
-		                >
-	                  {activeIsConfirmed ? '已确认' : '确认保存（Enter 待实现）'}
-	                </Button>
+			                  disabled={!activeStudentId || activeIsConfirmed}
+			                >
+		                  {activeIsConfirmed ? '已确认' : '确认保存（Enter 待实现）'}
+		                </Button>
 
-                  {activeIsConfirmed && (
-                    <Button
-                      variant="outline"
-                      className="rounded-xl border-2 border-black font-bold"
-	                      onClick={() => {
-	                        if (!activeStudentId) return
-	                        setConfirmedStudentIds((prev) => {
-	                          const next = new Set(prev)
+	                  {activeIsConfirmed && (
+	                    <Button
+	                      variant="outline"
+	                      className={actionButtonClassName}
+		                      onClick={() => {
+		                        if (!activeStudentId) return
+		                        setConfirmedStudentIds((prev) => {
+		                          const next = new Set(prev)
 	                          next.delete(activeStudentId)
 	                          safeWriteGradingConfirmed(batchId, next)
 	                          return next
