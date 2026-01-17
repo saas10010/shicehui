@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="480" viewBox="0 0 900 480">
+  <rect width="900" height="480" fill="#111827"/>
+  <rect x="30" y="30" width="840" height="420" rx="18" fill="#ffffff"/>
+  <text x="60" y="110" font-size="34" font-family="ui-sans-serif, system-ui" fill="#111827">第2题证据（裁切占位）</text>
+  <text x="60" y="155" font-size="18" font-family="ui-sans-serif, system-ui" fill="#6b7280">用于演示：快速核对填空/短答的真实书写</text>
+  <rect x="60" y="205" width="780" height="200" rx="14" fill="#f8fafc" stroke="#111827" stroke-width="3" stroke-dasharray="10 8"/>
+  <text x="80" y="285" font-size="26" font-family="ui-sans-serif, system-ui" fill="#111827">（这里是学生第2题的手写区域）</text>
+</svg>
+

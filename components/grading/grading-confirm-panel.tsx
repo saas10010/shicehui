@@ -1,12 +1,17 @@
 'use client'
 
 import * as React from 'react'
-import Image from 'next/image'
 import { toast } from 'sonner'
 
 import type { BatchStudentItem } from '@/lib/mock/types'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
+import {
+  type EvidenceByQuestionId,
+  type EvidencePage,
+  type EvidenceSourceMode,
+  GradingEvidenceView,
+} from '@/components/grading/grading-evidence-view'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,6 +31,46 @@ function getDraftGenerationKey(batchId: string) {
 
 function getGradingConfirmedKey(batchId: string) {
   return `shicehui:grading-confirmed:${batchId}`
+}
+
+function getGradingEvidenceSettingsKey(batchId: string) {
+  return `shicehui:grading-evidence-settings:${batchId}`
+}
+
+function safeReadGradingEvidenceSettings(batchId: string): {
+  sourceMode: EvidenceSourceMode
+  linkageEnabled: boolean
+} {
+  if (typeof window === 'undefined') {
+    return { sourceMode: '整份作业', linkageEnabled: true }
+  }
+  try {
+    const raw = window.sessionStorage.getItem(getGradingEvidenceSettingsKey(batchId))
+    if (!raw) return { sourceMode: '整份作业', linkageEnabled: true }
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') {
+      return { sourceMode: '整份作业', linkageEnabled: true }
+    }
+    const p = parsed as { sourceMode?: unknown; linkageEnabled?: unknown }
+    const sourceMode: EvidenceSourceMode =
+      p.sourceMode === '按题证据' ? '按题证据' : '整份作业'
+    const linkageEnabled = p.linkageEnabled === false ? false : true
+    return { sourceMode, linkageEnabled }
+  } catch {
+    return { sourceMode: '整份作业', linkageEnabled: true }
+  }
+}
+
+function safeWriteGradingEvidenceSettings(
+  batchId: string,
+  v: { sourceMode: EvidenceSourceMode; linkageEnabled: boolean },
+) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(getGradingEvidenceSettingsKey(batchId), JSON.stringify(v))
+  } catch {
+    // 忽略：原型演示不要求强一致
+  }
 }
 
 function safeReadGradingConfirmed(batchId: string) {
@@ -122,6 +167,13 @@ export function GradingConfirmPanel({
   const draftEditsRef = React.useRef<Record<string, DraftEdits>>({})
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
+  const [evidenceSourceMode, setEvidenceSourceMode] =
+    React.useState<EvidenceSourceMode>('整份作业')
+  const [evidenceLinkageEnabled, setEvidenceLinkageEnabled] = React.useState(true)
+  const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(() => {
+    return buildDraftQuestions()[0]?.id ?? null
+  })
+
   const getStudentDraftStatus = React.useCallback(
     (i: BatchStudentItem): DraftUIStatus => {
       const base: DraftUIStatus = i.draftStatus === '处理中' ? '处理中' : '可确认'
@@ -212,6 +264,19 @@ export function GradingConfirmPanel({
     setConfirmedStudentIds(safeReadGradingConfirmed(batchId))
   }, [batchId])
 
+  React.useEffect(() => {
+    const v = safeReadGradingEvidenceSettings(batchId)
+    setEvidenceSourceMode(v.sourceMode)
+    setEvidenceLinkageEnabled(v.linkageEnabled)
+  }, [batchId])
+
+  React.useEffect(() => {
+    safeWriteGradingEvidenceSettings(batchId, {
+      sourceMode: evidenceSourceMode,
+      linkageEnabled: evidenceLinkageEnabled,
+    })
+  }, [batchId, evidenceLinkageEnabled, evidenceSourceMode])
+
   const [activeStudentId, setActiveStudentId] = React.useState(() => {
     const requested =
       defaultStudentId && items.some((i) => i.studentId === defaultStudentId)
@@ -260,6 +325,10 @@ export function GradingConfirmPanel({
   }, [activeStudentId])
 
   React.useEffect(() => {
+    setActiveQuestionId(buildDraftQuestions()[0]?.id ?? null)
+  }, [activeStudentId])
+
+  React.useEffect(() => {
     return () => {
       if (!activeStudentId) return
       draftEditsRef.current[activeStudentId] = { questions, comment }
@@ -269,6 +338,56 @@ export function GradingConfirmPanel({
   const activeIsConfirmed = Boolean(
     activeStudentId && confirmedStudentIds.has(activeStudentId),
   )
+
+  const evidencePages: EvidencePage[] = React.useMemo(() => {
+    const base = ['/evidence/page-1.svg', '/evidence/page-2.svg', '/evidence/page-3.svg']
+    const count = Math.max(1, active?.imageCount ?? 1)
+    return Array.from({ length: count }, (_, idx) => ({
+      id: `p${idx + 1}`,
+      label: `第${idx + 1}页`,
+      src: base[idx % base.length] ?? '/evidence/page-1.svg',
+    }))
+  }, [active?.imageCount])
+
+  const evidenceByQuestionId: EvidenceByQuestionId = React.useMemo(() => {
+    const clamp = (i: number) => Math.max(0, Math.min(i, evidencePages.length - 1))
+
+    return {
+      q1: {
+        pageIndex: clamp(0),
+        boxes: [{ x: 8, y: 30, w: 84, h: 10, label: '第1题区域（原型高亮）' }],
+        items: [
+          {
+            id: 'q1-1',
+            label: '证据1（裁切）',
+            src: '/evidence/crop-q1.svg',
+          },
+        ],
+      },
+      q2: {
+        pageIndex: clamp(0),
+        boxes: [{ x: 8, y: 45, w: 84, h: 10, label: '第2题区域（原型高亮）' }],
+        items: [
+          {
+            id: 'q2-1',
+            label: '证据1（裁切）',
+            src: '/evidence/crop-q2.svg',
+          },
+        ],
+      },
+      q3: {
+        pageIndex: clamp(1),
+        boxes: [{ x: 8, y: 30, w: 84, h: 16, label: '第3题区域（原型高亮）' }],
+        items: [
+          {
+            id: 'q3-1',
+            label: '证据1（裁切）',
+            src: '/evidence/crop-q3.svg',
+          },
+        ],
+      },
+    }
+  }, [evidencePages.length])
 
   return (
     <TooltipProvider>
@@ -411,24 +530,9 @@ export function GradingConfirmPanel({
             <Skeleton className="h-10 w-full" />
           </div>
         ) : (
-          <div className="mt-4 grid gap-4 lg:grid-cols-[240px_1fr]">
-            <div className="space-y-3">
-              <div className="text-sm font-bold">作业图片（占位）</div>
-              <div className="relative h-56 w-full overflow-hidden rounded-xl border-2 border-black bg-white">
-                <Image
-                  src="/placeholder.jpg"
-                  alt="作业图片占位"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="text-xs text-muted-foreground">
-                原型说明：真实系统应展示题目/答案区域与证据视图。
-              </div>
-            </div>
-
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px]">
 	            <div className="space-y-4">
-	              <div className="text-sm font-bold">题目初稿</div>
+	              <div className="text-sm font-bold">题目/答案区域（初稿）</div>
                 {activeIsConfirmed && (
                   <div className="rounded-xl border-2 border-black bg-white/60 p-3 text-sm font-bold">
                     已确认：如需修改，请先点击「撤销确认」。
@@ -438,11 +542,22 @@ export function GradingConfirmPanel({
 	                {questions.map((q) => (
                   <div
                     key={q.id}
-                    className="rounded-xl border-2 border-black bg-white/70 p-3"
+                    className={cn(
+                      'rounded-xl border-2 border-black bg-white/70 p-3',
+                      activeQuestionId === q.id ? 'ring-2 ring-black' : '',
+                    )}
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="font-bold">{q.title}</div>
                       <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-xl border-2 border-black px-3 text-xs font-bold"
+                          onClick={() => setActiveQuestionId(q.id)}
+                        >
+                          查看证据
+                        </Button>
                         <Button
                           type="button"
                           variant={q.correct ? 'default' : 'outline'}
@@ -585,6 +700,20 @@ export function GradingConfirmPanel({
                     </Button>
                   )}
 	              </div>
+            </div>
+            <div className="xl:sticky xl:top-6 xl:self-start">
+              <GradingEvidenceView
+                resetKey={activeStudentId ?? 'no-student'}
+                sourceMode={evidenceSourceMode}
+                onSourceModeChange={setEvidenceSourceMode}
+                linkageEnabled={evidenceLinkageEnabled}
+                onLinkageEnabledChange={setEvidenceLinkageEnabled}
+                questions={questions.map((q) => ({ id: q.id, title: q.title }))}
+                activeQuestionId={activeQuestionId}
+                onActiveQuestionIdChange={setActiveQuestionId}
+                pages={evidencePages}
+                evidenceByQuestionId={evidenceByQuestionId}
+              />
             </div>
           </div>
         )}
