@@ -24,6 +24,35 @@ function getDraftGenerationKey(batchId: string) {
   return `shicehui:draft-generation:${batchId}`
 }
 
+function getGradingConfirmedKey(batchId: string) {
+  return `shicehui:grading-confirmed:${batchId}`
+}
+
+function safeReadGradingConfirmed(batchId: string) {
+  if (typeof window === 'undefined') return new Set<string>()
+  try {
+    const raw = window.sessionStorage.getItem(getGradingConfirmedKey(batchId))
+    if (!raw) return new Set<string>()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set<string>()
+    return new Set(parsed.filter((x) => typeof x === 'string'))
+  } catch {
+    return new Set<string>()
+  }
+}
+
+function safeWriteGradingConfirmed(batchId: string, ids: Set<string>) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(
+      getGradingConfirmedKey(batchId),
+      JSON.stringify(Array.from(ids)),
+    )
+  } catch {
+    // 忽略：原型演示不要求强一致
+  }
+}
+
 function safeReadDraftGeneration(batchId: string): DraftGenerationRecord {
   if (typeof window === 'undefined') return {}
   try {
@@ -177,6 +206,10 @@ export function GradingConfirmPanel({
       }
       generationTimersRef.current = {}
     }
+  }, [batchId])
+
+  React.useEffect(() => {
+    setConfirmedStudentIds(safeReadGradingConfirmed(batchId))
   }, [batchId])
 
   const [activeStudentId, setActiveStudentId] = React.useState(() => {
@@ -349,6 +382,7 @@ export function GradingConfirmPanel({
             setConfirmedStudentIds((prev) => {
               const next = new Set(prev)
               for (const id of selectedIds) next.add(id)
+              safeWriteGradingConfirmed(batchId, next)
               return next
             })
             setSelectedStudentIds(new Set())
@@ -482,18 +516,19 @@ export function GradingConfirmPanel({
 	                      <Button
 	                        variant="outline"
 	                        className="rounded-xl border-2 border-black font-bold"
-	                        onClick={() => {
-	                          if (!activeStudentId) return
-	                          setConfirmedStudentIds((prev) => {
-	                            const next = new Set(prev)
-	                            next.delete(activeStudentId)
-	                            return next
-	                          })
-	                          setSelectedStudentIds((prev) => {
-	                            const next = new Set(prev)
-	                            next.delete(activeStudentId)
-	                            return next
-	                          })
+		                        onClick={() => {
+		                          if (!activeStudentId) return
+		                          setConfirmedStudentIds((prev) => {
+		                            const next = new Set(prev)
+		                            next.delete(activeStudentId)
+		                            safeWriteGradingConfirmed(batchId, next)
+		                            return next
+		                          })
+		                          setSelectedStudentIds((prev) => {
+		                            const next = new Set(prev)
+		                            next.delete(activeStudentId)
+		                            return next
+		                          })
 	                          triggerDraftRegenerate(activeStudentId)
 	                          setQuestions(buildDraftQuestions())
 	                          setComment('')
@@ -510,17 +545,18 @@ export function GradingConfirmPanel({
 	                  </Tooltip>
 		                <Button
 		                  className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-		                  onClick={() => {
-		                    if (!activeStudentId) return
-		                    draftEditsRef.current[activeStudentId] = { questions, comment }
-		                    setConfirmedStudentIds((prev) => {
-		                      const next = new Set(prev)
-		                      next.add(activeStudentId)
-		                      return next
-		                    })
-		                    setSelectedStudentIds((prev) => {
-		                      const next = new Set(prev)
-		                      next.delete(activeStudentId)
+			                  onClick={() => {
+			                    if (!activeStudentId) return
+			                    draftEditsRef.current[activeStudentId] = { questions, comment }
+			                    setConfirmedStudentIds((prev) => {
+			                      const next = new Set(prev)
+			                      next.add(activeStudentId)
+			                      safeWriteGradingConfirmed(batchId, next)
+			                      return next
+			                    })
+			                    setSelectedStudentIds((prev) => {
+			                      const next = new Set(prev)
+			                      next.delete(activeStudentId)
 		                      return next
 		                    })
 		                    toast.success('已保存，状态已更新为「已确认」（原型未持久化）')
@@ -534,17 +570,18 @@ export function GradingConfirmPanel({
                     <Button
                       variant="outline"
                       className="rounded-xl border-2 border-black font-bold"
-                      onClick={() => {
-                        if (!activeStudentId) return
-                        setConfirmedStudentIds((prev) => {
-                          const next = new Set(prev)
-                          next.delete(activeStudentId)
-                          return next
-                        })
-                        toast.message('已撤销确认，可继续修改（原型未持久化）')
-                      }}
-                    >
-                      撤销确认
+	                      onClick={() => {
+	                        if (!activeStudentId) return
+	                        setConfirmedStudentIds((prev) => {
+	                          const next = new Set(prev)
+	                          next.delete(activeStudentId)
+	                          safeWriteGradingConfirmed(batchId, next)
+	                          return next
+	                        })
+	                        toast.message('已撤销确认，可继续修改（原型未持久化）')
+	                      }}
+	                    >
+	                      撤销确认
                     </Button>
                   )}
 	              </div>

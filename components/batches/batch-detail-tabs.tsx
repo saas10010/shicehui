@@ -31,6 +31,23 @@ function getDraftGenerationKey(batchId: string) {
   return `shicehui:draft-generation:${batchId}`
 }
 
+function getGradingConfirmedKey(batchId: string) {
+  return `shicehui:grading-confirmed:${batchId}`
+}
+
+function safeReadGradingConfirmed(batchId: string) {
+  if (typeof window === 'undefined') return new Set<string>()
+  try {
+    const raw = window.sessionStorage.getItem(getGradingConfirmedKey(batchId))
+    if (!raw) return new Set<string>()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set<string>()
+    return new Set(parsed.filter((x) => typeof x === 'string'))
+  } catch {
+    return new Set<string>()
+  }
+}
+
 function safeReadDraftGeneration(batchId: string): DraftGenerationRecord {
   if (typeof window === 'undefined') return {}
   try {
@@ -79,6 +96,9 @@ export function BatchDetailTabs({
   const [draftStatusByStudentId, setDraftStatusByStudentId] = React.useState<
     Record<string, DraftUIStatus>
   >({})
+  const [confirmedStudentIds, setConfirmedStudentIds] = React.useState<Set<string>>(
+    () => new Set(),
+  )
   const router = useRouter()
   const generationTimersRef = React.useRef<Record<string, number>>({})
 
@@ -98,6 +118,20 @@ export function BatchDetailTabs({
         window.clearTimeout(timerId)
       }
       generationTimersRef.current = {}
+    }
+	  }, [batchId])
+
+  React.useEffect(() => {
+    const refresh = () => setConfirmedStudentIds(safeReadGradingConfirmed(batchId))
+    refresh()
+    window.addEventListener('focus', refresh)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [batchId])
 
@@ -212,6 +246,7 @@ export function BatchDetailTabs({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {studentItems.map((item) => {
               const assignedCount = assignedExceptionCounts[item.studentId] ?? 0
+              const isConfirmed = confirmedStudentIds.has(item.studentId)
               // 学生 Tab 不展示“需处理”，该概念只在异常处理流程里体现：
               // - 初稿状态：处理中 / 可确认（来自 mock，用于演示“初稿是否生成可看”）
               // - 异常是否处理完：在页头展示“已保存归属/未保存”进度作为提示
@@ -219,6 +254,7 @@ export function BatchDetailTabs({
                 item.draftStatus === '处理中' ? '处理中' : '可确认'
               const draftDisplayStatus =
                 draftStatusByStudentId[item.studentId] ?? baseDraftStatus
+              const statusToShow = isConfirmed ? '已确认' : draftDisplayStatus
               return (
                 <div
                   key={item.studentId}
@@ -231,7 +267,7 @@ export function BatchDetailTabs({
                         作业张数：{item.imageCount} · 已归属异常：{assignedCount}
                       </div>
                     </div>
-                    <StatusBadge status={draftDisplayStatus} />
+                    <StatusBadge status={statusToShow} />
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -242,7 +278,23 @@ export function BatchDetailTabs({
                     >
                       <Link href={`/students/${item.studentId}`}>打开档案</Link>
                     </Button>
-                    {draftDisplayStatus !== '可确认' ? (
+                    {isConfirmed ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex">
+                            <Button
+                              className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                              disabled
+                            >
+                              已确认
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-80">
+                          已确认。如需修改，请到“批改确认”中点击「撤销确认」。
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : draftDisplayStatus !== '可确认' ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <span className="inline-flex">
