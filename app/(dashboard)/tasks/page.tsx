@@ -1,6 +1,5 @@
-import { TasksCenter } from '@/components/tasks/tasks-center'
+import { redirect } from 'next/navigation'
 
 export default function TasksPage() {
-  return <TasksCenter />
+  redirect('/reinforce?tab=tasks')
 }
-

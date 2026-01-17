@@ -32,6 +32,7 @@ export const config = {
     '/data/:path*',
     '/materials/:path*',
     '/tasks/:path*',
+    '/reinforce/:path*',
     '/settings/:path*',
     '/students/:path*',
   ],

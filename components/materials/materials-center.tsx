@@ -93,7 +93,13 @@ function downloadHrefForJob(job: PdfJob) {
   return `/api/materials/pdf?${params.toString()}`
 }
 
-export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: string }) {
+export function MaterialsCenter({
+  defaultStudentId,
+  embedded = false,
+}: {
+  defaultStudentId?: string
+  embedded?: boolean
+}) {
   const [jobs, setJobs] = React.useState<PdfJob[]>([])
   const [selectedClassId, setSelectedClassId] = React.useState(CLASSES[0]?.id ?? 'c-7-1')
   const [selectedStudentId, setSelectedStudentId] = React.useState(() => {
@@ -175,12 +181,14 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
 
   return (
     <div className="space-y-4">
-      <BrutalCard className="p-5">
-        <h1 className="text-2xl font-black">题单与册子</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          把学情数据转化为可交付物：全班题单/个人练习册/复习册（FR11/FR12）。
-        </p>
-      </BrutalCard>
+      {embedded ? null : (
+        <BrutalCard className="p-5">
+          <h1 className="text-2xl font-black">题单与册子</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            把学情数据转化为可交付物：全班题单/个人练习册/复习册（FR11/FR12）。
+          </p>
+        </BrutalCard>
+      )}
 
       <Tabs defaultValue="class" className="w-full">
         <TabsList className="w-full bg-white/60 border-2 border-black rounded-xl p-1">

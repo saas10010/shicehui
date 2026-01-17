@@ -1,4 +1,4 @@
-import { MaterialsCenter } from '@/components/materials/materials-center'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,5 +12,10 @@ export default async function MaterialsPage({
     typeof resolvedSearchParams.studentId === 'string'
       ? resolvedSearchParams.studentId
       : undefined
-  return <MaterialsCenter defaultStudentId={studentId} />
+
+  const params = new URLSearchParams()
+  params.set('tab', 'materials')
+  if (studentId) params.set('studentId', studentId)
+
+  redirect(`/reinforce?${params.toString()}`)
 }

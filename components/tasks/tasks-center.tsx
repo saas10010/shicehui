@@ -41,7 +41,7 @@ function saveTasks(tasks: Task[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
 }
 
-export function TasksCenter() {
+export function TasksCenter({ embedded = false }: { embedded?: boolean }) {
   const [tasks, setTasks] = React.useState<Task[]>([])
   const [open, setOpen] = React.useState(false)
   const [title, setTitle] = React.useState('巩固练习：合并同类项')
@@ -57,26 +57,46 @@ export function TasksCenter() {
 
   return (
     <div className="space-y-4">
-      <BrutalCard className="p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-black">练习任务</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              基于错题推荐同考点巩固题并下发任务（FR13/FR14）。原型仅演示创建与状态。
-            </p>
+      {embedded ? null : (
+        <BrutalCard className="p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-black">练习任务</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                基于错题推荐同考点巩固题并下发任务（FR13/FR14）。原型仅演示创建与状态。
+              </p>
+            </div>
+            <Button
+              className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              onClick={() => setOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              创建任务
+            </Button>
           </div>
-          <Button
-            className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            onClick={() => setOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            创建任务
-          </Button>
-        </div>
-      </BrutalCard>
+        </BrutalCard>
+      )}
 
       <BrutalCard className="p-5">
-        <div className="text-lg font-black">任务列表</div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-lg font-black">{embedded ? '练习任务' : '任务列表'}</div>
+            {embedded ? (
+              <div className="mt-1 text-sm text-muted-foreground">
+                基于错题推荐同考点巩固题并下发任务（FR13/FR14）。原型仅演示创建与状态。
+              </div>
+            ) : null}
+          </div>
+          {embedded ? (
+            <Button
+              className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              onClick={() => setOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              创建任务
+            </Button>
+          ) : null}
+        </div>
         <div className="mt-4 space-y-3">
           {tasks.map((t) => (
             <div key={t.id} className="rounded-xl border-2 border-black bg-white/70 p-4">
@@ -146,4 +166,3 @@ export function TasksCenter() {
     </div>
   )
 }
-
