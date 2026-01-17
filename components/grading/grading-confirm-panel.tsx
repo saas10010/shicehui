@@ -79,6 +79,28 @@ export function GradingConfirmPanel({
     Record<string, DraftUIStatus>
   >({})
   const generationTimersRef = React.useRef<Record<string, number>>({})
+  const [selectedStudentIds, setSelectedStudentIds] = React.useState<Set<string>>(
+    () => new Set(),
+  )
+  const [confirmedStudentIds, setConfirmedStudentIds] = React.useState<Set<string>>(
+    () => new Set(),
+  )
+
+  const getStudentDraftStatus = React.useCallback(
+    (i: BatchStudentItem): DraftUIStatus => {
+      const base: DraftUIStatus = i.draftStatus === '处理中' ? '处理中' : '可确认'
+      return draftStatusByStudentId[i.studentId] ?? base
+    },
+    [draftStatusByStudentId],
+  )
+
+  const isStudentSelectable = React.useCallback(
+    (i: BatchStudentItem) => {
+      // 原型口径：仅“可确认”的学生允许被批量确认选择（生成中/处理中不允许）
+      return getStudentDraftStatus(i) === '可确认' && !confirmedStudentIds.has(i.studentId)
+    },
+    [confirmedStudentIds, getStudentDraftStatus],
+  )
 
   function triggerDraftRegenerate(studentId: string) {
     const now = Date.now()
@@ -168,6 +190,10 @@ export function GradingConfirmPanel({
     const base: DraftUIStatus = active.draftStatus === '处理中' ? '处理中' : '可确认'
     return draftStatusByStudentId[active.studentId] ?? base
   }, [active, draftStatusByStudentId])
+  const activeFinalStatus = React.useMemo(() => {
+    if (!active) return null
+    return confirmedStudentIds.has(active.studentId) ? '已完成' : activeDraftStatus
+  }, [active, activeDraftStatus, confirmedStudentIds])
   const [questions, setQuestions] = React.useState<DraftQuestion[]>(
     buildDraftQuestions(),
   )
@@ -187,14 +213,57 @@ export function GradingConfirmPanel({
           <div className="text-xs text-muted-foreground">↑↓（待实现）</div>
         </div>
 
-	        <div className="mt-3 space-y-2">
-	            {items.map((i) => {
-	              const activeRow = i.studentId === activeStudentId
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="text-xs text-muted-foreground">
+            已选择：{selectedStudentIds.size}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 rounded-xl border-2 border-black px-3 text-xs font-bold"
+              onClick={() => {
+                const selectableIds = items
+                  .filter(isStudentSelectable)
+                  .map((i) => i.studentId)
+                if (selectableIds.length === 0) {
+                  toast.message('暂无可确认的学生可全选（原型）')
+                  return
+                }
+                setSelectedStudentIds(new Set(selectableIds))
+                toast.success(`已全选可确认：${selectableIds.length} 人（原型）`)
+              }}
+            >
+              全选可确认
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 rounded-xl border-2 border-black px-3 text-xs font-bold"
+              onClick={() => {
+                setSelectedStudentIds(new Set())
+                toast.message('已清空选择（原型）')
+              }}
+              disabled={selectedStudentIds.size === 0}
+            >
+              清空
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2">
+            {items.map((i) => {
+              const activeRow = i.studentId === activeStudentId
 	              const baseDraftStatus: DraftUIStatus =
 	                i.draftStatus === '处理中' ? '处理中' : '可确认'
 	              const draftStatus: DraftUIStatus =
 	                draftStatusByStudentId[i.studentId] ?? baseDraftStatus
-	              return (
+                const finalStatus = confirmedStudentIds.has(i.studentId)
+                  ? '已完成'
+                  : draftStatus
+                const selectable = isStudentSelectable(i)
+                const checked = selectedStudentIds.has(i.studentId)
+              return (
                 <button
                   key={i.studentId}
                   type="button"
@@ -204,10 +273,32 @@ export function GradingConfirmPanel({
                 )}
                 onClick={() => setActiveStudentId(i.studentId)}
                 >
-	                  <div className="flex items-center justify-between gap-2">
-	                    <div className="truncate">{i.studentName}</div>
-	                    <StatusBadge status={draftStatus} className="shrink-0" />
-	                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="inline-flex"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-black"
+                          checked={checked}
+                          disabled={!selectable}
+                          onChange={() => {
+                            setSelectedStudentIds((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(i.studentId)) next.delete(i.studentId)
+                              else next.add(i.studentId)
+                              return next
+                            })
+                          }}
+                        />
+                      </span>
+                      <div className="truncate">{i.studentName}</div>
+                    </div>
+	                    <StatusBadge status={finalStatus} className="shrink-0" />
+                  </div>
                   <div className={cn('mt-1 text-xs', activeRow ? 'text-white/80' : 'text-muted-foreground')}>
                   作业张数：{i.imageCount} · 异常：{i.exceptions}
                 </div>
@@ -218,9 +309,20 @@ export function GradingConfirmPanel({
 
         <Button
           className="mt-4 w-full rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          onClick={() => toast.success('已批量确认（原型占位）')}
+          disabled={selectedStudentIds.size === 0}
+          onClick={() => {
+            const selectedIds = Array.from(selectedStudentIds)
+            if (selectedIds.length === 0) return
+            setConfirmedStudentIds((prev) => {
+              const next = new Set(prev)
+              for (const id of selectedIds) next.add(id)
+              return next
+            })
+            setSelectedStudentIds(new Set())
+            toast.success(`已批量确认：${selectedIds.length} 人（原型未持久化）`)
+          }}
         >
-          批量确认（占位）
+          批量确认
         </Button>
       </div>
 
@@ -232,9 +334,8 @@ export function GradingConfirmPanel({
               快速纠错：改对错/改分数/补评语（FR7）。
             </div>
 	          </div>
-	          {active &&
-	            <StatusBadge status={activeDraftStatus} />}
-	        </div>
+          {active && <StatusBadge status={activeFinalStatus ?? activeDraftStatus} />}
+        </div>
 
         {!active || activeDraftStatus !== '可确认' ? (
           <div className="mt-4 space-y-3">
