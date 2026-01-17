@@ -58,14 +58,14 @@ export type WrongQuestion = {
   createdAt: string
 }
 
-export type PdfJobType = '全班易错题单' | '个人练习册/复习册'
+export type PdfJobType = '全班易错题单' | '个人练习册' | '个人复习册' | '个人练习册/复习册'
 
 export type PdfJob = {
   id: Id
   type: PdfJobType
   targetLabel: string
   rangeLabel: string
+  outline?: string[]
   status: '生成中' | '已完成' | '失败'
   createdAt: string
 }
-

@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { BrutalBackground, BrutalFrame } from '@/components/brutal/brutal-frame'
 import { MobileNav } from '@/components/dashboard/mobile-nav'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
-import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout({
   children,
@@ -25,16 +24,6 @@ export default function DashboardLayout({
                   师策汇
                 </div>
               </Link>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-3">
-              <Button
-                variant="outline"
-                className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                asChild
-              >
-                <Link href="/materials">生成资料</Link>
-              </Button>
             </div>
           </div>
         </header>

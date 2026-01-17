@@ -9,7 +9,15 @@ import { BrutalCard } from '@/components/brutal/brutal-card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { StatusBadge } from '@/components/status-badge'
+import { CLASSES, STUDENTS } from '@/lib/mock/data'
 
 const STORAGE_KEY = 'shicehui:pdfJobs'
 
@@ -38,11 +46,79 @@ function saveJobs(jobs: PdfJob[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs))
 }
 
+type DateRangePreset = '7d' | '30d' | 'all' | 'custom'
+
+function formatYmd(date: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+function labelForRange(range: DateRangePreset, start: string, end: string) {
+  if (range === '7d') return '最近7天'
+  if (range === '30d') return '最近30天'
+  if (range === 'all') return '全部'
+  return start && end ? `自定义：${start} ~ ${end}` : '自定义'
+}
+
+type PersonalDocKind = 'practice' | 'review'
+
+function defaultRangeForPersonalDoc(kind: PersonalDocKind): DateRangePreset {
+  return kind === 'practice' ? '7d' : '30d'
+}
+
+function outlineForPersonalDoc(kind: PersonalDocKind): string[] {
+  if (kind === 'practice') {
+    return [
+      '最近错题的同类题巩固（按知识点分组）',
+      '分层递进：基础题 → 变式题 → 提升题',
+      '每题附「易错提醒」与「纠错要点」',
+      '末尾 1 页「本周薄弱点清单」',
+    ]
+  }
+  return [
+    '阶段核心知识点清单（按单元/章节）',
+    '高频错因总结（错因 → 对策）',
+    '易错题回顾 + 关键题型混合练习',
+    '复习计划建议（每日 20-30 分钟）',
+  ]
+}
+
+function downloadHrefForJob(job: PdfJob) {
+  const params = new URLSearchParams()
+  params.set('jobId', job.id)
+  params.set('type', job.type)
+  params.set('target', job.targetLabel)
+  params.set('range', job.rangeLabel)
+  if (job.outline?.length) params.set('outline', job.outline.join('\n'))
+  return `/api/materials/pdf?${params.toString()}`
+}
+
 export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: string }) {
   const [jobs, setJobs] = React.useState<PdfJob[]>([])
-  const [classId, setClassId] = React.useState('七年级1班')
-  const [student, setStudent] = React.useState(defaultStudentId ? `学生ID：${defaultStudentId}` : '张晨（#001）')
-  const [range, setRange] = React.useState('最近7天')
+  const [selectedClassId, setSelectedClassId] = React.useState(CLASSES[0]?.id ?? 'c-7-1')
+  const [selectedStudentId, setSelectedStudentId] = React.useState(() => {
+    if (defaultStudentId && STUDENTS.some((s) => s.id === defaultStudentId)) return defaultStudentId
+    return STUDENTS[0]?.id ?? ''
+  })
+  const [personalDocKind, setPersonalDocKind] = React.useState<PersonalDocKind>('practice')
+  const [range, setRange] = React.useState<DateRangePreset>('7d')
+  const [startDraft, setStartDraft] = React.useState('')
+  const [endDraft, setEndDraft] = React.useState('')
+
+  React.useEffect(() => {
+    if (defaultStudentId && STUDENTS.some((s) => s.id === defaultStudentId)) {
+      setSelectedStudentId(defaultStudentId)
+    }
+  }, [defaultStudentId])
+
+  React.useEffect(() => {
+    const next = defaultRangeForPersonalDoc(personalDocKind)
+    setRange(next)
+    if (next !== 'custom') {
+      setStartDraft('')
+      setEndDraft('')
+    }
+  }, [personalDocKind])
 
   React.useEffect(() => {
     setJobs(loadJobs())
@@ -52,12 +128,24 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
     saveJobs(jobs)
   }, [jobs])
 
-  const createJob = (type: PdfJobType, targetLabel: string) => {
+  const createJob = (type: PdfJobType, targetLabel: string, outline?: string[]) => {
+    if (range === 'custom') {
+      if (!startDraft || !endDraft) {
+        toast.error('请选择自定义起止日期')
+        return
+      }
+      if (startDraft > endDraft) {
+        toast.error('开始日期不能晚于结束日期')
+        return
+      }
+    }
+
     const job: PdfJob = {
       id: randomId('job'),
       type,
       targetLabel,
-      rangeLabel: range,
+      rangeLabel: labelForRange(range, startDraft, endDraft),
+      outline,
       status: '生成中',
       createdAt: nowLabel(),
     }
@@ -73,6 +161,17 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
       toast.success('生成完成（原型）')
     }, 1200)
   }
+
+  const selectedStudent = STUDENTS.find((s) => s.id === selectedStudentId) ?? null
+  const selectedStudentClassName =
+    selectedStudent
+      ? CLASSES.find((c) => c.id === selectedStudent.classId)?.name ?? selectedStudent.classId
+      : ''
+  const selectedStudentLabel = selectedStudent ? `${selectedStudent.name}（#${selectedStudent.code}）` : selectedStudentId
+  const studentJobLabel =
+    selectedStudent && selectedStudentClassName
+      ? `${selectedStudentClassName} · ${selectedStudentLabel}`
+      : selectedStudentLabel
 
   return (
     <div className="space-y-4">
@@ -103,25 +202,77 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <div className="text-sm font-bold">班级</div>
-                <Input
-                  value={classId}
-                  onChange={(e) => setClassId(e.target.value)}
-                  className="border-2 border-black rounded-xl"
-                />
+                <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                  <SelectTrigger className="h-10 border-2 border-black rounded-xl bg-white">
+                    <SelectValue placeholder="选择班级" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-black">
+                    {CLASSES.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <div className="text-sm font-bold">时间范围</div>
-                <Input
+                <Select
                   value={range}
-                  onChange={(e) => setRange(e.target.value)}
-                  className="border-2 border-black rounded-xl"
-                />
+                  onValueChange={(value) => {
+                    const next = value as DateRangePreset
+                    setRange(next)
+                    if (next === 'custom' && !startDraft && !endDraft) {
+                      const end = new Date()
+                      const start = new Date(end)
+                      start.setDate(end.getDate() - 6)
+                      setStartDraft(formatYmd(start))
+                      setEndDraft(formatYmd(end))
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-10 border-2 border-black rounded-xl bg-white">
+                    <SelectValue placeholder="时间范围" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-black">
+                    <SelectItem value="7d">最近7天</SelectItem>
+                    <SelectItem value="30d">最近30天</SelectItem>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="custom">自定义</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
+            {range === 'custom' && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="text-sm font-bold">开始日期</div>
+                  <Input
+                    type="date"
+                    value={startDraft}
+                    onChange={(e) => setStartDraft(e.target.value)}
+                    className="h-10 border-2 border-black rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-bold">结束日期</div>
+                  <Input
+                    type="date"
+                    value={endDraft}
+                    onChange={(e) => setEndDraft(e.target.value)}
+                    className="h-10 border-2 border-black rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
             <Button
               className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-              onClick={() => createJob('全班易错题单', classId)}
+              onClick={() => {
+                const className = CLASSES.find((c) => c.id === selectedClassId)?.name ?? selectedClassId
+                createJob('全班易错题单', className)
+              }}
             >
               <Plus className="mr-2 h-4 w-4" />
               生成 PDF（原型）
@@ -131,30 +282,130 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
 
         <TabsContent value="personal">
           <BrutalCard className="mt-4 p-5 space-y-4">
-            <div className="text-lg font-black">生成个人练习册/复习册</div>
+            <div className="text-lg font-black">生成个人练习册 / 复习册</div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={personalDocKind === 'practice' ? 'default' : 'outline'}
+                className={
+                  personalDocKind === 'practice'
+                    ? 'rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                    : 'rounded-xl border-2 border-black font-bold'
+                }
+                onClick={() => setPersonalDocKind('practice')}
+              >
+                个人练习册
+              </Button>
+              <Button
+                type="button"
+                variant={personalDocKind === 'review' ? 'default' : 'outline'}
+                className={
+                  personalDocKind === 'review'
+                    ? 'rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
+                    : 'rounded-xl border-2 border-black font-bold'
+                }
+                onClick={() => setPersonalDocKind('review')}
+              >
+                个人复习册
+              </Button>
+            </div>
+
+            <div className="rounded-xl border-2 border-black bg-white/70 p-4">
+              <div className="text-sm font-black">
+                {personalDocKind === 'practice' ? '练习册：巩固近期薄弱点' : '复习册：阶段回顾与串联复现'}
+              </div>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                {outlineForPersonalDoc(personalDocKind).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              <div className="mt-2 text-xs text-muted-foreground">
+                默认时间范围：{personalDocKind === 'practice' ? '最近7天' : '最近30天'}（可手动调整）
+              </div>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <div className="text-sm font-bold">学生</div>
-                <Input
-                  value={student}
-                  onChange={(e) => setStudent(e.target.value)}
-                  className="border-2 border-black rounded-xl"
-                />
+                <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                  <SelectTrigger className="h-10 border-2 border-black rounded-xl bg-white">
+                    <SelectValue placeholder="选择学生" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-black">
+                    {STUDENTS.map((s) => {
+                      const className = CLASSES.find((c) => c.id === s.classId)?.name ?? s.classId
+                      return (
+                        <SelectItem key={s.id} value={s.id}>
+                          {className} · {s.name}（#{s.code}）
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <div className="text-sm font-bold">时间范围</div>
-                <Input
+                <Select
                   value={range}
-                  onChange={(e) => setRange(e.target.value)}
-                  className="border-2 border-black rounded-xl"
-                />
+                  onValueChange={(value) => {
+                    const next = value as DateRangePreset
+                    setRange(next)
+                    if (next === 'custom' && !startDraft && !endDraft) {
+                      const end = new Date()
+                      const start = new Date(end)
+                      start.setDate(end.getDate() - 6)
+                      setStartDraft(formatYmd(start))
+                      setEndDraft(formatYmd(end))
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-10 border-2 border-black rounded-xl bg-white">
+                    <SelectValue placeholder="时间范围" />
+                  </SelectTrigger>
+                  <SelectContent className="border-2 border-black">
+                    <SelectItem value="7d">最近7天</SelectItem>
+                    <SelectItem value="30d">最近30天</SelectItem>
+                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="custom">自定义</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
+            {range === 'custom' && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="text-sm font-bold">开始日期</div>
+                  <Input
+                    type="date"
+                    value={startDraft}
+                    onChange={(e) => setStartDraft(e.target.value)}
+                    className="h-10 border-2 border-black rounded-xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-bold">结束日期</div>
+                  <Input
+                    type="date"
+                    value={endDraft}
+                    onChange={(e) => setEndDraft(e.target.value)}
+                    className="h-10 border-2 border-black rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
             <Button
               className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-              onClick={() => createJob('个人练习册/复习册', student)}
+              onClick={() => {
+                if (!selectedStudentId) {
+                  toast.error('请选择学生')
+                  return
+                }
+                const type: PdfJobType = personalDocKind === 'practice' ? '个人练习册' : '个人复习册'
+                createJob(type, studentJobLabel, outlineForPersonalDoc(personalDocKind))
+              }}
             >
               <Plus className="mr-2 h-4 w-4" />
               生成 PDF（原型）
@@ -189,7 +440,7 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
                         asChild
                         disabled={j.status !== '已完成'}
                       >
-                        <a href={`/api/materials/pdf?jobId=${j.id}`}>
+                        <a href={downloadHrefForJob(j)}>
                           <Download className="mr-2 h-4 w-4" />
                           下载
                         </a>
@@ -224,4 +475,3 @@ export function MaterialsCenter({ defaultStudentId }: { defaultStudentId?: strin
     </div>
   )
 }
-
