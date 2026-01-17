@@ -25,6 +25,36 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
+type DraftGenerationRecord = Record<string, { readyAt: number }>
+
+function getDraftGenerationKey(batchId: string) {
+  return `shicehui:draft-generation:${batchId}`
+}
+
+function safeReadDraftGeneration(batchId: string): DraftGenerationRecord {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.sessionStorage.getItem(getDraftGenerationKey(batchId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    return parsed as DraftGenerationRecord
+  } catch {
+    return {}
+  }
+}
+
+function safeWriteDraftGeneration(batchId: string, record: DraftGenerationRecord) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(getDraftGenerationKey(batchId), JSON.stringify(record))
+  } catch {
+    // 忽略：原型演示不要求强一致
+  }
+}
+
+type DraftUIStatus = '处理中' | '生成中' | '可确认'
+
 export function BatchDetailTabs({
   classId,
   batchId,
@@ -38,12 +68,72 @@ export function BatchDetailTabs({
   studentItems: BatchStudentItem[]
   exceptions: BatchExceptionItem[]
 }) {
+  const [activeTab, setActiveTab] = React.useState<'students' | 'exceptions'>(
+    'students',
+  )
   // 异常归属（原型）：
   // - `selected`：当前页面上正在编辑的归属选择
   // - `saved`：点击“保存修正”后确认的最终归属（刷新会丢失，但用于演示“最终归属口径”）
   const [selected, setSelected] = React.useState<Record<string, string>>({})
   const [saved, setSaved] = React.useState<Record<string, string>>({})
+  const [draftStatusByStudentId, setDraftStatusByStudentId] = React.useState<
+    Record<string, DraftUIStatus>
+  >({})
   const router = useRouter()
+  const generationTimersRef = React.useRef<Record<string, number>>({})
+
+  React.useEffect(() => {
+    // 从 sessionStorage 恢复“生成中”状态（用于返回该页面时继续演示）
+    const now = Date.now()
+    const record = safeReadDraftGeneration(batchId)
+    const next: Record<string, DraftUIStatus> = {}
+    for (const [studentId, v] of Object.entries(record)) {
+      if (!v || typeof v.readyAt !== 'number') continue
+      next[studentId] = v.readyAt > now ? '生成中' : '可确认'
+    }
+    if (Object.keys(next).length > 0) setDraftStatusByStudentId(next)
+
+    return () => {
+      for (const timerId of Object.values(generationTimersRef.current)) {
+        window.clearTimeout(timerId)
+      }
+      generationTimersRef.current = {}
+    }
+  }, [batchId])
+
+  function triggerDraftGenerationForStudents(studentIds: string[]) {
+    const now = Date.now()
+    const record = safeReadDraftGeneration(batchId)
+    const uniqueIds = Array.from(new Set(studentIds)).filter(Boolean)
+    if (uniqueIds.length === 0) return
+
+    setDraftStatusByStudentId((prev) => {
+      const next = { ...prev }
+      for (const id of uniqueIds) next[id] = '生成中'
+      return next
+    })
+
+    for (const studentId of uniqueIds) {
+      const existingTimer = generationTimersRef.current[studentId]
+      if (existingTimer) window.clearTimeout(existingTimer)
+
+      const delay = 1500 + Math.floor(Math.random() * 1200)
+      const readyAt = now + delay
+      record[studentId] = { readyAt }
+
+      generationTimersRef.current[studentId] = window.setTimeout(() => {
+        setDraftStatusByStudentId((prev) => ({ ...prev, [studentId]: '可确认' }))
+        const latest = safeReadDraftGeneration(batchId)
+        const v = latest[studentId]
+        if (v && typeof v.readyAt === 'number' && v.readyAt <= Date.now()) {
+          delete latest[studentId]
+          safeWriteDraftGeneration(batchId, latest)
+        }
+      }, delay)
+    }
+
+    safeWriteDraftGeneration(batchId, record)
+  }
 
   function isSameAssignment(
     a: Record<string, string>,
@@ -81,7 +171,7 @@ export function BatchDetailTabs({
 
   return (
     <TooltipProvider>
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
         <TabsList className="w-full bg-white/60 border-2 border-black rounded-xl p-1">
           <TabsTrigger
             value="students"
@@ -125,8 +215,10 @@ export function BatchDetailTabs({
               // 学生 Tab 不展示“需处理”，该概念只在异常处理流程里体现：
               // - 初稿状态：处理中 / 可确认（来自 mock，用于演示“初稿是否生成可看”）
               // - 异常是否处理完：在页头展示“已保存归属/未保存”进度作为提示
-              const draftDisplayStatus =
+              const baseDraftStatus: DraftUIStatus =
                 item.draftStatus === '处理中' ? '处理中' : '可确认'
+              const draftDisplayStatus =
+                draftStatusByStudentId[item.studentId] ?? baseDraftStatus
               return (
                 <div
                   key={item.studentId}
@@ -200,19 +292,39 @@ export function BatchDetailTabs({
               <Button
                 className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 onClick={() => {
-                  const selectedAssignedTotal = Object.values(selected).filter(
-                    Boolean,
+                  // 允许部分保存：用于演示“保存后触发生成初稿”的流程。
+                  // 最终归属口径以 `saved` 为准，`selected` 为编辑态。
+                  const nextSaved = { ...saved, ...selected }
+                  const unassignedTotal = exceptions.filter(
+                    (e) => !nextSaved[e.id],
                   ).length
-                  const selectedUnassignedTotal =
-                    exceptions.length - selectedAssignedTotal
-                  if (selectedUnassignedTotal > 0) {
-                    toast.message(
-                      `还有 ${selectedUnassignedTotal} 条异常未归属，建议先完成归属再保存（原型）`,
-                    )
+                  const assignedTotal = exceptions.length - unassignedTotal
+
+                  if (assignedTotal <= 0) {
+                    toast.message('请先为至少 1 条异常选择归属再保存（原型）')
                     return
                   }
-                  setSaved(selected)
-                  toast.success('已保存归属修正（原型未持久化）')
+
+                  const affectedStudentIds = Array.from(
+                    new Set([
+                      ...Object.values(saved),
+                      ...Object.values(nextSaved),
+                    ]),
+                  ).filter(Boolean)
+                  setSaved(nextSaved)
+                  setSelected(nextSaved)
+                  setActiveTab('students')
+
+                  if (unassignedTotal > 0) {
+                    toast.message(
+                      `已保存 ${assignedTotal} 条归属，剩余 ${unassignedTotal} 条未归属；已切到学生页，可观察“生成中→可确认”（原型）`,
+                    )
+                  } else {
+                    toast.success(
+                      '已保存归属修正，已切到学生页，可观察“生成中→可确认”（原型）',
+                    )
+                  }
+                  triggerDraftGenerationForStudents(affectedStudentIds)
                 }}
               >
                 保存修正

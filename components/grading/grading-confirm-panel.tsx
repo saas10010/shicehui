@@ -18,15 +18,45 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 
+type DraftGenerationRecord = Record<string, { readyAt: number }>
+
+function getDraftGenerationKey(batchId: string) {
+  return `shicehui:draft-generation:${batchId}`
+}
+
+function safeReadDraftGeneration(batchId: string): DraftGenerationRecord {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.sessionStorage.getItem(getDraftGenerationKey(batchId))
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object') return {}
+    return parsed as DraftGenerationRecord
+  } catch {
+    return {}
+  }
+}
+
+function safeWriteDraftGeneration(batchId: string, record: DraftGenerationRecord) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(
+      getDraftGenerationKey(batchId),
+      JSON.stringify(record),
+    )
+  } catch {
+    // 忽略：原型演示不要求强一致
+  }
+}
+
+type DraftUIStatus = '处理中' | '生成中' | '可确认'
+
 type DraftQuestion = {
   id: string
   title: string
   score: number
   correct: boolean
 }
-
-const draftStatusNeedsAttentionHelp =
-  '该学生存在异常需先处理（缺码/识别冲突/码损坏等），处理后再确认。'
 
 const gradingPendingHelp =
   '用于把当前学生暂缓处理（例如初稿明显错误/无法确认），后续再处理或重新识别（演示：不持久化）。'
@@ -40,15 +70,62 @@ function buildDraftQuestions(): DraftQuestion[] {
 }
 
 export function GradingConfirmPanel({
+  batchId,
   items,
   defaultStudentId,
 }: {
+  batchId: string
   items: BatchStudentItem[]
   defaultStudentId?: string
 }) {
   const [pendingStudentIds, setPendingStudentIds] = React.useState<Set<string>>(
     () => new Set(),
   )
+  const [draftStatusByStudentId, setDraftStatusByStudentId] = React.useState<
+    Record<string, DraftUIStatus>
+  >({})
+  const generationTimersRef = React.useRef<Record<string, number>>({})
+
+  React.useEffect(() => {
+    const now = Date.now()
+    const record = safeReadDraftGeneration(batchId)
+    const next: Record<string, DraftUIStatus> = {}
+
+    for (const [studentId, v] of Object.entries(record)) {
+      if (!v || typeof v.readyAt !== 'number') continue
+      next[studentId] = v.readyAt > now ? '生成中' : '可确认'
+      if (v.readyAt > now) {
+        const delay = Math.max(0, v.readyAt - now)
+        const existingTimer = generationTimersRef.current[studentId]
+        if (existingTimer) window.clearTimeout(existingTimer)
+        generationTimersRef.current[studentId] = window.setTimeout(() => {
+          setDraftStatusByStudentId((prev) => ({
+            ...prev,
+            [studentId]: '可确认',
+          }))
+          const latest = safeReadDraftGeneration(batchId)
+          const latestV = latest[studentId]
+          if (
+            latestV &&
+            typeof latestV.readyAt === 'number' &&
+            latestV.readyAt <= Date.now()
+          ) {
+            delete latest[studentId]
+            safeWriteDraftGeneration(batchId, latest)
+          }
+        }, delay)
+      }
+    }
+
+    if (Object.keys(next).length > 0) setDraftStatusByStudentId(next)
+
+    return () => {
+      for (const timerId of Object.values(generationTimersRef.current)) {
+        window.clearTimeout(timerId)
+      }
+      generationTimersRef.current = {}
+    }
+  }, [batchId])
 
   const [activeStudentId, setActiveStudentId] = React.useState(() => {
     const requested =
@@ -63,6 +140,11 @@ export function GradingConfirmPanel({
   })
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
+  const activeDraftStatus: DraftUIStatus = React.useMemo(() => {
+    if (!active) return '处理中'
+    const base: DraftUIStatus = active.draftStatus === '处理中' ? '处理中' : '可确认'
+    return draftStatusByStudentId[active.studentId] ?? base
+  }, [active, draftStatusByStudentId])
   const [questions, setQuestions] = React.useState<DraftQuestion[]>(
     buildDraftQuestions(),
   )
@@ -82,11 +164,15 @@ export function GradingConfirmPanel({
           <div className="text-xs text-muted-foreground">↑↓（待实现）</div>
         </div>
 
-        <div className="mt-3 space-y-2">
-            {items.map((i) => {
-              const activeRow = i.studentId === activeStudentId
-              const isPending = pendingStudentIds.has(i.studentId)
-              return (
+	        <div className="mt-3 space-y-2">
+	            {items.map((i) => {
+	              const activeRow = i.studentId === activeStudentId
+	              const isPending = pendingStudentIds.has(i.studentId)
+	              const baseDraftStatus: DraftUIStatus =
+	                i.draftStatus === '处理中' ? '处理中' : '可确认'
+	              const draftStatus: DraftUIStatus =
+	                draftStatusByStudentId[i.studentId] ?? baseDraftStatus
+	              return (
                 <button
                   key={i.studentId}
                   type="button"
@@ -98,32 +184,21 @@ export function GradingConfirmPanel({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="truncate">{i.studentName}</div>
-                    {isPending ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="shrink-0">
-                            <StatusBadge status="待处理" />
-                          </span>
+	                    {isPending ? (
+	                      <Tooltip>
+	                        <TooltipTrigger asChild>
+	                          <span className="shrink-0">
+	                            <StatusBadge status="待处理" />
+	                          </span>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-80">
                           {gradingPendingHelp}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : i.draftStatus === '需处理' ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="shrink-0">
-                          <StatusBadge status={i.draftStatus} />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-80">
-                        {draftStatusNeedsAttentionHelp}
-                      </TooltipContent>
-                  </Tooltip>
-                  ) : (
-                    <StatusBadge status={i.draftStatus} className="shrink-0" />
-                  )}
-                  </div>
+	                        </TooltipContent>
+	                      </Tooltip>
+	                    ) : (
+	                      <StatusBadge status={draftStatus} className="shrink-0" />
+	                    )}
+	                  </div>
                   <div className={cn('mt-1 text-xs', activeRow ? 'text-white/80' : 'text-muted-foreground')}>
                   作业张数：{i.imageCount} · 异常：{i.exceptions}
                 </div>
@@ -160,23 +235,12 @@ export function GradingConfirmPanel({
                   {gradingPendingHelp}
                 </TooltipContent>
               </Tooltip>
-            ) : active.draftStatus === '需处理' ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="shrink-0">
-                    <StatusBadge status={active.draftStatus} />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-80">
-                  {draftStatusNeedsAttentionHelp}
-                </TooltipContent>
-              </Tooltip>
             ) : (
-              <StatusBadge status={active.draftStatus} />
+              <StatusBadge status={activeDraftStatus} />
             ))}
         </div>
 
-        {!active || active.draftStatus === '处理中' ? (
+        {!active || activeDraftStatus !== '可确认' ? (
           <div className="mt-4 space-y-3">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-40 w-full" />

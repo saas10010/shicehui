@@ -54,7 +54,11 @@ export default async function GradingConfirmPage({
         </div>
       </BrutalCard>
 
-      <GradingConfirmPanel items={items} defaultStudentId={requestedStudentId} />
+      <GradingConfirmPanel
+        batchId={batchId}
+        items={items}
+        defaultStudentId={requestedStudentId}
+      />
     </div>
   )
 }
