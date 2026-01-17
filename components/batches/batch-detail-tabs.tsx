@@ -10,6 +10,12 @@ import { StatusBadge } from '@/components/status-badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -17,6 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+
+const draftStatusNeedsAttentionHelp =
+  '该学生存在异常需先处理（缺码/识别冲突/码损坏等），处理后再确认。'
 
 export function BatchDetailTabs({
   classId,
@@ -34,7 +43,8 @@ export function BatchDetailTabs({
   const [selected, setSelected] = React.useState<Record<string, string>>({})
 
   return (
-    <Tabs defaultValue="students" className="w-full">
+    <TooltipProvider>
+      <Tabs defaultValue="students" className="w-full">
       <TabsList className="w-full bg-white/60 border-2 border-black rounded-xl p-1">
         <TabsTrigger
           value="students"
@@ -78,7 +88,20 @@ export function BatchDetailTabs({
                     作业张数：{item.imageCount} · 异常：{item.exceptions}
                   </div>
                 </div>
-                <StatusBadge status={item.draftStatus} />
+                {item.draftStatus === '需处理' ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="shrink-0">
+                        <StatusBadge status={item.draftStatus} />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-80">
+                      {draftStatusNeedsAttentionHelp}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <StatusBadge status={item.draftStatus} />
+                )}
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
@@ -193,7 +216,7 @@ export function BatchDetailTabs({
           </div>
         )}
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </TooltipProvider>
   )
 }
-

@@ -9,6 +9,12 @@ import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -18,6 +24,12 @@ type DraftQuestion = {
   score: number
   correct: boolean
 }
+
+const draftStatusNeedsAttentionHelp =
+  '该学生存在异常需先处理（缺码/识别冲突/码损坏等），处理后再确认。'
+
+const gradingPendingHelp =
+  '用于把当前学生暂缓处理（例如初稿明显错误/无法确认），后续再处理或重新识别（演示：不持久化）。'
 
 function buildDraftQuestions(): DraftQuestion[] {
   return [
@@ -32,6 +44,10 @@ export function GradingConfirmPanel({
 }: {
   items: BatchStudentItem[]
 }) {
+  const [pendingStudentIds, setPendingStudentIds] = React.useState<Set<string>>(
+    () => new Set(),
+  )
+
   const [activeStudentId, setActiveStudentId] = React.useState(
     items.find((i) => i.draftStatus === '可确认')?.studentId ?? items[0]?.studentId,
   )
@@ -48,7 +64,8 @@ export function GradingConfirmPanel({
   }, [activeStudentId])
 
   return (
-    <div className="grid gap-4 md:grid-cols-[320px_1fr]">
+    <TooltipProvider>
+      <div className="grid gap-4 md:grid-cols-[320px_1fr]">
       <div className="rounded-2xl border-4 border-black bg-white/70 p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-center justify-between gap-3">
           <div className="text-lg font-black">学生列表</div>
@@ -56,23 +73,48 @@ export function GradingConfirmPanel({
         </div>
 
         <div className="mt-3 space-y-2">
-          {items.map((i) => {
-            const activeRow = i.studentId === activeStudentId
-            return (
-              <button
-                key={i.studentId}
-                type="button"
+            {items.map((i) => {
+              const activeRow = i.studentId === activeStudentId
+              const isPending = pendingStudentIds.has(i.studentId)
+              return (
+                <button
+                  key={i.studentId}
+                  type="button"
                 className={cn(
                   'w-full rounded-xl border-2 border-black p-3 text-left font-bold shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]',
                   activeRow ? 'bg-black text-white' : 'bg-white hover:bg-white/70',
                 )}
                 onClick={() => setActiveStudentId(i.studentId)}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="truncate">{i.studentName}</div>
-                  <StatusBadge status={i.draftStatus} className="shrink-0" />
-                </div>
-                <div className={cn('mt-1 text-xs', activeRow ? 'text-white/80' : 'text-muted-foreground')}>
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate">{i.studentName}</div>
+                    {isPending ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0">
+                            <StatusBadge status="待处理" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-80">
+                          {gradingPendingHelp}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : i.draftStatus === '需处理' ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="shrink-0">
+                          <StatusBadge status={i.draftStatus} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-80">
+                        {draftStatusNeedsAttentionHelp}
+                      </TooltipContent>
+                  </Tooltip>
+                  ) : (
+                    <StatusBadge status={i.draftStatus} className="shrink-0" />
+                  )}
+                  </div>
+                  <div className={cn('mt-1 text-xs', activeRow ? 'text-white/80' : 'text-muted-foreground')}>
                   作业张数：{i.imageCount} · 异常：{i.exceptions}
                 </div>
               </button>
@@ -96,7 +138,32 @@ export function GradingConfirmPanel({
               快速纠错：改对错/改分数/补评语（FR7）。
             </div>
           </div>
-          {active && <StatusBadge status={active.draftStatus} />}
+          {active &&
+            (pendingStudentIds.has(active.studentId) ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="shrink-0">
+                    <StatusBadge status="待处理" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-80">
+                  {gradingPendingHelp}
+                </TooltipContent>
+              </Tooltip>
+            ) : active.draftStatus === '需处理' ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="shrink-0">
+                    <StatusBadge status={active.draftStatus} />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-80">
+                  {draftStatusNeedsAttentionHelp}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <StatusBadge status={active.draftStatus} />
+            ))}
         </div>
 
         {!active || active.draftStatus === '处理中' ? (
@@ -197,13 +264,28 @@ export function GradingConfirmPanel({
               </div>
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button
-                  variant="outline"
-                  className="rounded-xl border-2 border-black font-bold"
-                  onClick={() => toast.message('已标记为待处理（原型占位）')}
-                >
-                  标记待处理
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl border-2 border-black font-bold"
+                      onClick={() => {
+                        if (!activeStudentId) return
+                        setPendingStudentIds((prev) => {
+                          const next = new Set(prev)
+                          next.add(activeStudentId)
+                          return next
+                        })
+                        toast.message('已标记为待处理（原型未持久化）')
+                      }}
+                    >
+                      标记待处理
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-80">
+                    {gradingPendingHelp}
+                  </TooltipContent>
+                </Tooltip>
                 <Button
                   className="rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                   onClick={() => toast.success('已保存并确认（原型未持久化）')}
@@ -215,7 +297,7 @@ export function GradingConfirmPanel({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   )
 }
-
