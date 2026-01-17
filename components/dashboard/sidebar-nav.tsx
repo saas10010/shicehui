@@ -28,7 +28,7 @@ export function SidebarNav({
         const active = isActive(pathname, item.href)
         return (
           <Link
-            key={item.href}
+            key={item.id}
             href={item.href}
             onClick={() => onNavigate?.()}
             className={cn(
@@ -59,4 +59,3 @@ export function SidebarNav({
     </nav>
   )
 }
-
