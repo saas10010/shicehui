@@ -347,7 +347,7 @@ export function GradingConfirmPanel({
                           toast.success('已触发重新识别，正在生成初稿（原型）')
                         }}
                       >
-                        重新识别（原型）
+                        重新识别
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-80">
