@@ -1,19 +1,9 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-})
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-})
 
 export const metadata: Metadata = {
   title: '师策汇｜教师端原型',
@@ -48,8 +38,6 @@ export default function RootLayout({
       <body
         className={cn(
           'min-h-svh font-sans antialiased',
-          geist.variable,
-          geistMono.variable,
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>

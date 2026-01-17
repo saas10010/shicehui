@@ -32,7 +32,11 @@ export function WechatPage({
         {children}
       </div>
 
-      {tabs ? <WechatTabbar tabs={tabs} /> : null}
+      {tabs ? (
+        <React.Suspense fallback={null}>
+          <WechatTabbar tabs={tabs} />
+        </React.Suspense>
+      ) : null}
     </div>
   )
 }
