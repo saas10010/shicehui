@@ -10,12 +10,12 @@ import {
   getStudentsByClassId,
 } from '@/lib/mock/queries'
 
-export default function BatchDetailPage({
+export default async function BatchDetailPage({
   params,
 }: {
-  params: { classId: string; batchId: string }
+  params: Promise<{ classId: string; batchId: string }>
 }) {
-  const { classId, batchId } = params
+  const { classId, batchId } = await params
   const classInfo = getClassById(classId)
   const batch = getBatchById(batchId)
   if (!classInfo || !batch || batch.classId !== classId) notFound()
@@ -69,4 +69,3 @@ export default function BatchDetailPage({
     </div>
   )
 }
-

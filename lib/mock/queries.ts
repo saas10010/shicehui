@@ -27,6 +27,10 @@ export function getBatchesByClassId(classId: string) {
   return BATCHES.filter((b) => b.classId === classId)
 }
 
+export function getBatches() {
+  return [...BATCHES].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 export function getBatchById(batchId: string) {
   return BATCHES.find((b) => b.id === batchId) ?? null
 }
@@ -48,4 +52,3 @@ export function getWrongQuestionsByClass(classId: string) {
   const studentIds = new Set(students.map((s) => s.id))
   return WRONG_QUESTIONS.filter((q) => studentIds.has(q.studentId))
 }
-

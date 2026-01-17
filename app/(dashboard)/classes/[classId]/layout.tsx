@@ -4,14 +4,14 @@ import { BrutalCard } from '@/components/brutal/brutal-card'
 import { ClassSubnav } from '@/components/classes/class-subnav'
 import { getClassById } from '@/lib/mock/queries'
 
-export default function ClassLayout({
+export default async function ClassLayout({
   children,
   params,
 }: {
   children: React.ReactNode
-  params: { classId: string }
+  params: Promise<{ classId: string }>
 }) {
-  const { classId } = params
+  const { classId } = await params
   const classInfo = getClassById(classId)
   if (!classInfo) notFound()
 

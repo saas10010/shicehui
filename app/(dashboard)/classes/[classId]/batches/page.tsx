@@ -11,12 +11,12 @@ function statusLabel(status: 'processing' | 'ready' | 'needs_attention') {
   return '处理中'
 }
 
-export default function ClassBatchesPage({
+export default async function ClassBatchesPage({
   params,
 }: {
-  params: { classId: string }
+  params: Promise<{ classId: string }>
 }) {
-  const { classId } = params
+  const { classId } = await params
   const classInfo = getClassById(classId)
   if (!classInfo) notFound()
 

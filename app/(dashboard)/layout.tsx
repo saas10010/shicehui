@@ -39,14 +39,13 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <div className="grid md:grid-cols-[280px_1fr] min-h-[calc(100svh-6rem)]">
+        <div className="grid md:grid-cols-[280px_1fr]">
           <aside className="hidden md:block border-r-4 border-black bg-white/40 p-4">
             <SidebarNav />
           </aside>
-          <main className="overflow-auto p-4 sm:p-6">{children}</main>
+          <main className="p-4 sm:p-6">{children}</main>
         </div>
       </BrutalFrame>
     </BrutalBackground>
   )
 }
-

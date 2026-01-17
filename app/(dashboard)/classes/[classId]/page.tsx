@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
 
-export default function ClassIndexPage({
+export default async function ClassIndexPage({
   params,
 }: {
-  params: { classId: string }
+  params: Promise<{ classId: string }>
 }) {
-  const { classId } = params
+  const { classId } = await params
   redirect(`/classes/${classId}/students`)
 }

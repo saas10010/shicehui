@@ -4,12 +4,12 @@ import { BrutalCard } from '@/components/brutal/brutal-card'
 import { StudentList } from '@/components/students/student-list'
 import { getClassById, getStudentsByClassId } from '@/lib/mock/queries'
 
-export default function ClassStudentsPage({
+export default async function ClassStudentsPage({
   params,
 }: {
-  params: { classId: string }
+  params: Promise<{ classId: string }>
 }) {
-  const { classId } = params
+  const { classId } = await params
   const classInfo = getClassById(classId)
   if (!classInfo) notFound()
 
@@ -35,4 +35,3 @@ export default function ClassStudentsPage({
     </div>
   )
 }
-

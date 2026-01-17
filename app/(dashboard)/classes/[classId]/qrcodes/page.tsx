@@ -5,12 +5,12 @@ import { BrutalCard } from '@/components/brutal/brutal-card'
 import { Button } from '@/components/ui/button'
 import { getClassById, getStudentsByClassId } from '@/lib/mock/queries'
 
-export default function ClassQRCodesPage({
+export default async function ClassQRCodesPage({
   params,
 }: {
-  params: { classId: string }
+  params: Promise<{ classId: string }>
 }) {
-  const { classId } = params
+  const { classId } = await params
   const classInfo = getClassById(classId)
   if (!classInfo) notFound()
 
@@ -87,4 +87,3 @@ export default function ClassQRCodesPage({
     </div>
   )
 }
-
