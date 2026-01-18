@@ -53,12 +53,7 @@ export default async function TeacherStudentProfilePage({
   return (
     <div className="space-y-4">
       <WechatCard className="p-4">
-        <div className="text-xs text-black/50">
-          <Link href={backHref} className="text-[#07c160]">
-            ← 返回学生列表
-          </Link>
-        </div>
-        <div className="mt-2 flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-medium text-black">
               {student.name} <span className="text-xs text-black/40">#{student.code}</span>
@@ -68,6 +63,12 @@ export default async function TeacherStudentProfilePage({
             </div>
           </div>
           <WechatTag tone="default">档案</WechatTag>
+        </div>
+
+        <div className="mt-3">
+          <Link href={backHref} className="text-sm text-[#07c160]">
+            ← 返回学生列表
+          </Link>
         </div>
       </WechatCard>
 

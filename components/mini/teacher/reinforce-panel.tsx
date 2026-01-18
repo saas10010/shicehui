@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 
 import { WechatCard } from '@/components/mini/wechat-shell'
@@ -16,18 +17,31 @@ function normalizeTab(v: string | null): Tab {
 export function MiniReinforcePanel({
   defaultTab = 'materials',
   defaultStudentId,
-}: {
-  defaultTab?: Tab
-  defaultStudentId?: string
-}) {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const [tab, setTab] = React.useState<Tab>(defaultTab)
+  }: {
+    defaultTab?: Tab
+    defaultStudentId?: string
+  }) {
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const [tab, setTab] = React.useState<Tab>(defaultTab)
 
-  React.useEffect(() => {
-    const current = normalizeTab(searchParams.get('tab'))
-    if (current === tab) return
-    setTab(current)
+    const classIdFromQuery = searchParams.get('classId') ?? ''
+    const studentIdFromQuery = searchParams.get('studentId') ?? ''
+    const backHref = studentIdFromQuery
+      ? `/mini/teacher/students/${encodeURIComponent(studentIdFromQuery)}${classIdFromQuery ? `?classId=${encodeURIComponent(classIdFromQuery)}` : ''}`
+      : classIdFromQuery
+        ? `/mini/teacher/classes/${encodeURIComponent(classIdFromQuery)}`
+        : '/mini/teacher/classes'
+    const backLabel = studentIdFromQuery
+      ? '← 返回学生档案'
+      : classIdFromQuery
+        ? '← 返回班级'
+        : '← 返回班级列表'
+
+    React.useEffect(() => {
+      const current = normalizeTab(searchParams.get('tab'))
+      if (current === tab) return
+      setTab(current)
   }, [searchParams, tab])
 
   const switchTab = (next: Tab) => {
@@ -42,6 +56,11 @@ export function MiniReinforcePanel({
         <div className="text-sm font-medium text-black">巩固中心</div>
         <div className="mt-1 text-xs text-black/50">
           题单与册子用于讲评/打印；练习任务用于提交与统计（原型）。
+        </div>
+        <div className="mt-3">
+          <Link href={backHref} className="text-sm text-[#07c160]">
+            {backLabel}
+          </Link>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <button
@@ -69,4 +88,3 @@ export function MiniReinforcePanel({
     </div>
   )
 }
-

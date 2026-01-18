@@ -47,6 +47,12 @@ export default async function TeacherMiniHomeworkPage({
           </div>
           <WechatTag tone="default">{selectedClass?.name ?? '全部班级'}</WechatTag>
         </div>
+
+        <div className="mt-3">
+          <Link href="/mini/teacher/classes" className="text-sm text-[#07c160]">
+            ← 返回班级
+          </Link>
+        </div>
       </WechatCard>
 
       <WechatCard>
@@ -92,12 +98,6 @@ export default async function TeacherMiniHomeworkPage({
         ) : null}
       </WechatCard>
 
-      <div className="text-xs text-black/50">
-        <Link href="/mini/teacher/classes" className="text-[#07c160]">
-          ← 返回班级
-        </Link>
-      </div>
     </div>
   )
 }
-

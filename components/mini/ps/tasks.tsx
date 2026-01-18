@@ -118,6 +118,12 @@ export function MiniTaskDetail({
           </div>
           <WechatTag tone="warning">待实现题目</WechatTag>
         </div>
+
+        <div className="mt-3">
+          <Link href={`/mini/ps/tasks?role=${role}`} className="text-sm text-[#07c160]">
+            ← 返回任务列表
+          </Link>
+        </div>
       </WechatCard>
 
       <WechatCard className="p-4">
@@ -150,4 +156,3 @@ export function MiniTaskDetail({
     </div>
   )
 }
-

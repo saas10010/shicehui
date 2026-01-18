@@ -223,6 +223,15 @@ export function MiniDataDashboardPanel({
           <WechatTag tone="default">原型</WechatTag>
         </div>
 
+        <div className="mt-3">
+          <Link
+            href={`/mini/teacher/classes/${encodeURIComponent(classId)}`}
+            className="text-sm text-[#07c160]"
+          >
+            ← 返回班级
+          </Link>
+        </div>
+
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <div className="text-xs text-black/60">班级</div>
@@ -343,4 +352,3 @@ export function MiniDataDashboardPanel({
     </div>
   )
 }
-

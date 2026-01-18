@@ -30,6 +30,12 @@ export function ResultDetail({
           </div>
           <WechatTag tone="default">原型</WechatTag>
         </div>
+
+        <div className="mt-3">
+          <Link href={`/mini/ps/results?role=${role}`} className="text-sm text-[#07c160]">
+            ← 返回结果列表
+          </Link>
+        </div>
       </WechatCard>
 
       <WechatCard>
@@ -67,12 +73,6 @@ export function ResultDetail({
         />
       </WechatCard>
 
-      <div className="text-xs text-black/50">
-        <Link href={`/mini/ps/results?role=${role}`} className="text-[#07c160]">
-          ← 返回结果列表
-        </Link>
-      </div>
     </div>
   )
 }
-

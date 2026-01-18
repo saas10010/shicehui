@@ -237,8 +237,11 @@ export function MiniGradingConfirmPanel({
           <WechatTag tone={statusTone(activeFinalStatus)}>{activeFinalStatus}</WechatTag>
         </div>
 
-        <div className="mt-3 text-xs text-black/50">
-          <Link href={`/mini/teacher/classes/${classId}/batches/${batchId}`} className="text-[#07c160]">
+        <div className="mt-3">
+          <Link
+            href={`/mini/teacher/classes/${classId}/batches/${batchId}`}
+            className="text-sm text-[#07c160]"
+          >
             ← 返回批次详情
           </Link>
         </div>
@@ -399,4 +402,3 @@ export function MiniGradingConfirmPanel({
     </div>
   )
 }
-

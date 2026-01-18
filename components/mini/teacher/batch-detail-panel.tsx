@@ -212,6 +212,16 @@ export function BatchDetailPanel({
       <WechatCard className="p-4">
         <div className="text-sm font-medium text-black">{batch.title}</div>
         <div className="mt-1 text-xs text-black/50">{headerStat}</div>
+
+        <div className="mt-3">
+          <Link
+            href={`/mini/teacher/classes/${encodeURIComponent(classId)}/batches`}
+            className="text-sm text-[#07c160]"
+          >
+            ← 返回批次列表
+          </Link>
+        </div>
+
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Link
             href={`/mini/teacher/classes/${classId}/batches/${batch.id}?tab=students`}
@@ -406,4 +416,3 @@ export function BatchDetailPanel({
     </div>
   )
 }
-

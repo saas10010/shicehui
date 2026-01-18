@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
@@ -25,6 +26,11 @@ export default async function TeacherClassBatchesPage({
         <div className="mt-1 text-xs text-black/50">
           班级：{classInfo.name}。支持：批次详情、异常处理、批改确认（原型）。
         </div>
+        <div className="mt-3">
+          <Link href={`/mini/teacher/classes/${encodeURIComponent(classId)}`} className="text-sm text-[#07c160]">
+            ← 返回班级
+          </Link>
+        </div>
       </WechatCard>
 
       <WechatCard>
@@ -48,4 +54,3 @@ export default async function TeacherClassBatchesPage({
     </div>
   )
 }
-
