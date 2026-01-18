@@ -5,11 +5,11 @@ import { toast } from 'sonner'
 
 import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
 
-export function MiniClassManagementPanel({ classId }: { classId: string }) {
+export function MiniClassStudentImportCell() {
   const fileRef = React.useRef<HTMLInputElement | null>(null)
 
   return (
-    <WechatCard>
+    <>
       <WechatCell
         title="导入学生"
         description="原型：选择文件后模拟导入结果"
@@ -28,13 +28,26 @@ export function MiniClassManagementPanel({ classId }: { classId: string }) {
           e.target.value = ''
         }}
       />
-      <WechatDivider />
-      <WechatCell
-        title="巩固中心"
-        description="题单与册子 / 练习任务（本班）"
-        href={`/mini/teacher/reinforce?classId=${encodeURIComponent(classId)}`}
-      />
-    </WechatCard>
+    </>
   )
 }
 
+export function MiniClassReinforceCell({ classId }: { classId: string }) {
+  return (
+    <WechatCell
+      title="巩固中心"
+      description="题单与册子 / 练习任务（本班）"
+      href={`/mini/teacher/reinforce?classId=${encodeURIComponent(classId)}`}
+    />
+  )
+}
+
+export function MiniClassManagementPanel({ classId }: { classId: string }) {
+  return (
+    <WechatCard>
+      <MiniClassStudentImportCell />
+      <WechatDivider />
+      <MiniClassReinforceCell classId={classId} />
+    </WechatCard>
+  )
+}

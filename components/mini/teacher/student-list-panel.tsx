@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 
 import type { Student } from '@/lib/mock/types'
 import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
@@ -40,6 +41,15 @@ export function StudentListPanel({
         </div>
 
         <div className="mt-3">
+          <Link
+            href={`/mini/teacher/classes/${encodeURIComponent(classId)}`}
+            className="text-sm text-[#07c160]"
+          >
+            ← 返回班级
+          </Link>
+        </div>
+
+        <div className="mt-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -71,4 +81,3 @@ export function StudentListPanel({
     </div>
   )
 }
-
