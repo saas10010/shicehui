@@ -46,7 +46,7 @@ export default async function StudentProfilePage({
               {student.name} <span className="text-base text-muted-foreground">#{student.code}</span>
             </h1>
             <div className="mt-1 text-sm text-muted-foreground">
-              {classInfo?.name ?? '—'} · 二维码：{student.qrCodeValue}
+              {classInfo?.name ?? '—'} · 学号：{student.code}
             </div>
           </div>
 

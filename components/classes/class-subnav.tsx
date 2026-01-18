@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils'
 
 const items = [
   { key: 'students', label: '学生', hrefSuffix: '/students' },
-  { key: 'qrcodes', label: '二维码', hrefSuffix: '/qrcodes' },
   { key: 'batches', label: '作业批次', hrefSuffix: '/batches' },
 ]
 
@@ -33,4 +32,3 @@ export function ClassSubnav({ classId }: { classId: string }) {
     </div>
   )
 }
-

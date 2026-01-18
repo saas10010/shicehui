@@ -34,7 +34,7 @@ export function CapturePanel() {
           <div>
             <div className="text-base font-semibold text-black">连拍采集</div>
             <div className="mt-1 text-xs text-black/50">
-              取景框提示：二维码需入镜；拍摄后进入上传队列。
+              取景框提示：作业本的姓名/学号需入镜；拍摄后进入上传队列。
             </div>
           </div>
           <WechatTag tone={offline ? 'warning' : 'success'}>
@@ -89,7 +89,7 @@ export function CapturePanel() {
         <WechatDivider />
         <WechatCell
           title="拍摄注意事项"
-          description="尽量让二维码入镜；缺码/冲突会进入异常池"
+          description="尽量让姓名/学号清晰入镜；缺失/冲突会进入异常池"
           right={<WechatTag tone="default">提示</WechatTag>}
         />
       </WechatCard>
@@ -135,4 +135,3 @@ export function CapturePanel() {
     </div>
   )
 }
-

@@ -64,7 +64,7 @@ export default async function TeacherStudentProfilePage({
               {student.name} <span className="text-xs text-black/40">#{student.code}</span>
             </div>
             <div className="mt-1 text-xs text-black/50">
-              {classInfo?.name ?? '—'} · 二维码：{student.qrCodeValue}
+              {classInfo?.name ?? '—'} · 学号：{student.code}
             </div>
           </div>
           <WechatTag tone="default">档案</WechatTag>
@@ -172,4 +172,3 @@ export default async function TeacherStudentProfilePage({
     </div>
   )
 }
-

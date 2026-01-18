@@ -25,7 +25,7 @@ export function SettingsPanel() {
           <div>
             <div className="font-black">自动归档</div>
             <div className="text-sm text-muted-foreground">
-              上传后自动识别二维码并归档到学生（FR4）。
+              上传后自动识别姓名/学号并归档到学生（FR4）。
             </div>
           </div>
           <Switch checked={autoArchive} onCheckedChange={setAutoArchive} />
@@ -51,4 +51,3 @@ export function SettingsPanel() {
     </div>
   )
 }
-

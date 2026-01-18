@@ -57,7 +57,7 @@ export function StudentList({ students }: { students: Student[] }) {
               <span className="text-sm text-muted-foreground">#{s.code}</span>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
-              二维码：{s.qrCodeValue}
+              作业本请写姓名/学号，拍照采集后自动识别归档（原型）
             </div>
             <div className="mt-3 text-sm font-bold underline underline-offset-4">
               打开学生档案 →
@@ -74,4 +74,3 @@ export function StudentList({ students }: { students: Student[] }) {
     </div>
   )
 }
-

@@ -14,7 +14,7 @@ export default function ClassesPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black">班级列表</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            入口：建班 → 导入 → 下载二维码 → 连拍归档 → 批改确认 → 看板/档案 → 资料生成
+            入口：建班 → 导入 → 连拍采集（识别姓名/学号）→ 批改确认 → 看板/档案 → 资料生成
           </p>
         </div>
         <ClassActions />
@@ -55,4 +55,3 @@ export default function ClassesPage() {
     </div>
   )
 }
-

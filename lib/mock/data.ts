@@ -27,20 +27,20 @@ export const CLASSES: ClassInfo[] = [
 ]
 
 export const STUDENTS: Student[] = [
-  { id: 's-001', classId: 'c-7-1', name: '张晨', code: '001', qrCodeValue: 'SC-7-1-001' },
-  { id: 's-002', classId: 'c-7-1', name: '李悦', code: '002', qrCodeValue: 'SC-7-1-002' },
-  { id: 's-003', classId: 'c-7-1', name: '王浩', code: '003', qrCodeValue: 'SC-7-1-003' },
-  { id: 's-004', classId: 'c-7-1', name: '陈曦', code: '004', qrCodeValue: 'SC-7-1-004' },
-  { id: 's-005', classId: 'c-7-1', name: '赵一', code: '005', qrCodeValue: 'SC-7-1-005' },
-  { id: 's-006', classId: 'c-7-1', name: '周琪', code: '006', qrCodeValue: 'SC-7-1-006' },
-  { id: 's-007', classId: 'c-7-1', name: '孙铭', code: '007', qrCodeValue: 'SC-7-1-007' },
-  { id: 's-008', classId: 'c-7-1', name: '刘宁', code: '008', qrCodeValue: 'SC-7-1-008' },
-  { id: 's-101', classId: 'c-7-2', name: '林可', code: '101', qrCodeValue: 'SC-7-2-101' },
-  { id: 's-102', classId: 'c-7-2', name: '方宇', code: '102', qrCodeValue: 'SC-7-2-102' },
-  { id: 's-103', classId: 'c-7-2', name: '许然', code: '103', qrCodeValue: 'SC-7-2-103' },
-  { id: 's-104', classId: 'c-7-2', name: '郭欣', code: '104', qrCodeValue: 'SC-7-2-104' },
-  { id: 's-105', classId: 'c-7-2', name: '蒋晨', code: '105', qrCodeValue: 'SC-7-2-105' },
-  { id: 's-106', classId: 'c-7-2', name: '杜子', code: '106', qrCodeValue: 'SC-7-2-106' },
+  { id: 's-001', classId: 'c-7-1', name: '张晨', code: '001' },
+  { id: 's-002', classId: 'c-7-1', name: '李悦', code: '002' },
+  { id: 's-003', classId: 'c-7-1', name: '王浩', code: '003' },
+  { id: 's-004', classId: 'c-7-1', name: '陈曦', code: '004' },
+  { id: 's-005', classId: 'c-7-1', name: '赵一', code: '005' },
+  { id: 's-006', classId: 'c-7-1', name: '周琪', code: '006' },
+  { id: 's-007', classId: 'c-7-1', name: '孙铭', code: '007' },
+  { id: 's-008', classId: 'c-7-1', name: '刘宁', code: '008' },
+  { id: 's-101', classId: 'c-7-2', name: '林可', code: '101' },
+  { id: 's-102', classId: 'c-7-2', name: '方宇', code: '102' },
+  { id: 's-103', classId: 'c-7-2', name: '许然', code: '103' },
+  { id: 's-104', classId: 'c-7-2', name: '郭欣', code: '104' },
+  { id: 's-105', classId: 'c-7-2', name: '蒋晨', code: '105' },
+  { id: 's-106', classId: 'c-7-2', name: '杜子', code: '106' },
 ]
 
 export const BATCHES: Batch[] = [
@@ -239,7 +239,7 @@ export const BATCH_EXCEPTIONS: BatchExceptionItem[] = [
     id: 'e-001',
     batchId: 'b-20260116-1',
     thumbnail: '/placeholder.jpg',
-    reason: '缺码',
+    reason: '姓名学号缺失',
     suggestedStudentIds: ['s-004', 's-005'],
   },
   {
@@ -253,14 +253,14 @@ export const BATCH_EXCEPTIONS: BatchExceptionItem[] = [
     id: 'e-003',
     batchId: 'b-20260116-1',
     thumbnail: '/placeholder.jpg',
-    reason: '码损坏',
+    reason: '字迹不清',
     suggestedStudentIds: [],
   },
   {
     id: 'e-004',
     batchId: 'b-20260116-1',
     thumbnail: '/placeholder.jpg',
-    reason: '缺码',
+    reason: '姓名学号缺失',
     suggestedStudentIds: ['s-001'],
   },
 ]

@@ -35,7 +35,7 @@ export function MiniSettingsPanel() {
       <WechatCard>
         <WechatCell
           title="自动归档"
-          description="上传后自动识别二维码并归档到学生（FR4）"
+          description="上传后自动识别姓名/学号并归档到学生（FR4）"
           right={
             <label className="flex items-center gap-2 text-xs text-black/60">
               <input
@@ -89,4 +89,3 @@ export function MiniSettingsPanel() {
     </div>
   )
 }
-

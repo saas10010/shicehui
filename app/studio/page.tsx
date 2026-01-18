@@ -13,7 +13,7 @@ export default function StudioPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { title: '班级', desc: '班级/学生/二维码/批次', href: '/mini/teacher/classes' },
+          { title: '班级', desc: '班级/学生/批次', href: '/mini/teacher/classes' },
           { title: '作业', desc: '聚合查看批次进度与异常', href: '/mini/teacher/homework' },
           { title: '数据看板', desc: '题目/知识点排行（原型）', href: '/mini/teacher/data' },
           { title: '巩固中心', desc: '题单/册子 + 练习任务（原型）', href: '/mini/teacher/reinforce' },

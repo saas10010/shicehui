@@ -21,8 +21,7 @@ export function StudentListPanel({
     return students.filter((s) => {
       return (
         s.name.includes(q) ||
-        s.code.includes(q) ||
-        s.qrCodeValue.includes(q)
+        s.code.includes(q)
       )
     })
   }, [query, students])
@@ -53,7 +52,7 @@ export function StudentListPanel({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索：姓名 / 学号 / 二维码值"
+            placeholder="搜索：姓名 / 学号"
             className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black placeholder:text-black/30 outline-none focus:ring-2 focus:ring-[#07c160]/20"
           />
         </div>
@@ -64,8 +63,6 @@ export function StudentListPanel({
           <React.Fragment key={s.id}>
             <WechatCell
               title={`${s.name}（#${s.code}）`}
-              description={`二维码：${s.qrCodeValue}`}
-              right={<WechatTag tone="success">已绑码</WechatTag>}
               href={`/mini/teacher/students/${s.id}?classId=${encodeURIComponent(classId)}`}
             />
             {idx === filtered.length - 1 ? null : <WechatDivider />}

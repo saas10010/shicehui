@@ -14,7 +14,6 @@ export type Student = {
   classId: Id
   name: string
   code: string
-  qrCodeValue: string
 }
 
 export type BatchStatus = 'processing' | 'ready' | 'needs_attention'
@@ -44,7 +43,7 @@ export type BatchExceptionItem = {
   id: Id
   batchId: Id
   thumbnail: string
-  reason: '缺码' | '识别冲突' | '码损坏'
+  reason: '姓名学号缺失' | '识别冲突' | '字迹不清'
   suggestedStudentIds: Id[]
 }
 

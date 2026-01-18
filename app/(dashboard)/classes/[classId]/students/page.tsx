@@ -22,7 +22,7 @@ export default async function ClassStudentsPage({
           <div>
             <h2 className="text-xl font-black">学生列表</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              支持搜索/分页（原型：仅演示搜索）。从这里可进入学生档案、检查二维码绑定状态。
+              支持搜索/分页（原型：仅演示搜索）。从这里可进入学生档案；作业采集时将识别姓名/学号并归档到学生。
             </p>
           </div>
           <div className="text-sm font-bold">
