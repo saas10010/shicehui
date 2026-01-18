@@ -119,9 +119,51 @@ vercel --prod
    如果使用 Nginx 反向代理，配置示例：
 
    ```nginx
+   # Nginx 配置示例（完整版）
    server {
        listen 80;
        server_name your-domain.com;
+
+       # 重定向到 HTTPS（可选）
+       return 301 https://$server_name$request_uri;
+   }
+
+   server {
+       listen 443 ssl http2;
+       server_name your-domain.com;
+
+       # SSL 证书配置（Let's Encrypt 免费证书）
+       ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+       ssl_session_timeout 1d;
+       ssl_session_cache shared:SSL:50m;
+       ssl_session_tickets off;
+
+       # SSL 安全配置
+       ssl_protocols TLSv1.2 TLSv1.3;
+       ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+       ssl_prefer_server_ciphers off;
+
+       # 添加 HSTS 头（可选）
+       add_header Strict-Transport-Security "max-age=63072000" always;
+
+       # 日志配置
+       access_log /var/log/nginx/shicehui_access.log;
+       error_log /var/log/nginx/shicehui_error.log;
+
+       # Gzip 压缩
+       gzip on;
+       gzip_vary on;
+       gzip_min_length 1024;
+       gzip_proxied any;
+       gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml;
+       gzip_disable "MSIE [1-6]\.";
+
+       # 静态资源缓存
+       location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+           expires 1y;
+           add_header Cache-Control "public, immutable";
+       }
 
        location / {
            proxy_pass http://localhost:3000;
@@ -129,10 +171,41 @@ vercel --prod
            proxy_set_header Upgrade $http_upgrade;
            proxy_set_header Connection 'upgrade';
            proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
            proxy_cache_bypass $http_upgrade;
+
+           # 超时配置
+           proxy_connect_timeout 60s;
+           proxy_send_timeout 60s;
+           proxy_read_timeout 60s;
        }
    }
    ```
+
+### 证书申请（Let's Encrypt）
+
+```bash
+# 安装 certbot
+sudo apt install certbot python3-certbot-nginx
+
+# 申请证书（自动配置 Nginx）
+sudo certbot --nginx -d your-domain.com
+
+# 测试自动续期
+sudo certbot renew --dry-run
+```
+
+### 设置自动续期
+
+```bash
+# 添加 crontab 任务
+sudo crontab -e
+
+# 添加以下行（每天凌晨检查续期）
+0 0 * * * certbot renew --quiet
+```
 
 3. **启动 PM2**
 

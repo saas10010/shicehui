@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { WechatCard, WechatCell, WechatDivider, WechatPage, WechatTag } from '@/components/mini/wechat-shell'
 
 export default function MiniRoleSwitchPage() {
@@ -29,12 +28,6 @@ export default function MiniRoleSwitchPage() {
 
       <div className="mt-4 text-xs text-black/50">
         说明：本原型使用 Next.js 模拟微信小程序的“信息架构与交互状态”，不接入真实相机/离线存储/上传 SDK。
-      </div>
-
-      <div className="mt-6">
-        <Link href="/studio" className="text-sm text-[#07c160]">
-          ← 原型实验室
-        </Link>
       </div>
     </WechatPage>
   )
