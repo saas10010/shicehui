@@ -164,10 +164,16 @@ function percentLabel(v: number) {
 
 export function MiniDataDashboardPanel({
   defaultClassId,
+  lockClassId,
 }: {
   defaultClassId?: string
+  lockClassId?: boolean
 }) {
   const classes = React.useMemo(() => getClasses(), [])
+  const isDefaultClassIdValid = Boolean(
+    defaultClassId && classes.some((c) => c.id === defaultClassId),
+  )
+  const shouldLockClassId = Boolean(lockClassId && isDefaultClassIdValid)
   const [classId, setClassId] = React.useState(() => {
     if (defaultClassId && classes.some((c) => c.id === defaultClassId)) return defaultClassId
     return classes[0]?.id ?? ''
@@ -249,23 +255,40 @@ export function MiniDataDashboardPanel({
     )
   }
 
-  const tabBtn = (active: boolean) =>
-    `rounded-xl px-3 py-3 text-center text-sm font-semibold ${active ? 'bg-[#07c160] text-white' : 'bg-white text-black ring-1 ring-black/10 active:bg-black/5'}`
+  const segmentedBtn = (active: boolean, pos: 'left' | 'middle' | 'right') => {
+    const base = 'px-3 py-2.5 text-center text-sm font-semibold border border-black/10'
+    const state = active ? 'bg-[#07c160] text-white border-[#07c160]' : 'bg-white text-black active:bg-black/5'
+    const radius =
+      pos === 'left'
+        ? 'rounded-l-xl'
+        : pos === 'right'
+          ? 'rounded-r-xl -ml-px'
+          : '-ml-px'
+    return `${base} ${state} ${radius}`
+  }
+
+  const currentClassName = classes.find((c) => c.id === classId)?.name ?? '—'
 
   return (
-    <div className="space-y-4">
-      <WechatCard className="p-4">
+    <div className="space-y-0">
+      <WechatCard className="p-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-medium text-black">数据看板</div>
-            <div className="mt-1 text-xs text-black/50">
-              题目/知识点排行（原型）· 当前错题：{wrong.length} 条 · 时间范围：{rangeLabel}
-            </div>
+            {tab === 'dashboard' ? (
+              <div className="mt-1 text-xs text-black/50">
+                看板数据（原型）· 当前错题：{wrong.length} 条
+              </div>
+            ) : (
+              <div className="mt-1 text-xs text-black/50">
+                学生数据（原型）· 当前学生：{selectedStudent?.name ?? '—'} · 错题：{wrongByStudent.length} 条
+              </div>
+            )}
           </div>
           <WechatTag tone="default">原型</WechatTag>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-2">
           <Link
             href={`/mini/teacher/classes/${encodeURIComponent(classId)}`}
             className="text-sm text-[#07c160]"
@@ -274,73 +297,42 @@ export function MiniDataDashboardPanel({
           </Link>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <div className="text-xs text-black/60">班级</div>
-            <select
-              value={classId}
-              onChange={(e) => setClassId(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-            >
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <div className="text-xs text-black/60">时间范围</div>
-            <select
-              value={range}
-              onChange={(e) => {
-                const next = normalizeRangePreset(e.target.value)
-                setRange(next)
-                if (next !== 'custom') {
-                  setStart('')
-                  setEnd('')
-                }
-              }}
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-            >
-              <option value="7d">最近7天</option>
-              <option value="30d">最近30天</option>
-              <option value="all">全部</option>
-              <option value="custom">自定义</option>
-            </select>
-          </div>
-        </div>
-
-        {range === 'custom' ? (
-          <div className="mt-3 grid grid-cols-2 gap-3">
+        {shouldLockClassId ? (
+          <div className="mt-2 text-xs text-black/50">当前班级：{currentClassName}</div>
+        ) : (
+          <div className="mt-2 grid grid-cols-1 gap-2">
             <div className="space-y-1">
-              <div className="text-xs text-black/60">开始日期</div>
-              <input
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
+              <div className="text-xs text-black/60">班级</div>
+              <select
+                value={classId}
+                onChange={(e) => setClassId(e.target.value)}
                 className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-              />
-            </div>
-            <div className="space-y-1">
-              <div className="text-xs text-black/60">结束日期</div>
-              <input
-                type="date"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-              />
+              >
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        ) : null}
+        )}
       </WechatCard>
 
-      <WechatCard className="p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={() => setTab('dashboard')} className={tabBtn(tab === 'dashboard')}>
+      <WechatCard className="p-2">
+        <div className="grid grid-cols-2 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setTab('dashboard')}
+            className={segmentedBtn(tab === 'dashboard', 'left')}
+          >
             看板数据
           </button>
-          <button type="button" onClick={() => setTab('student')} className={tabBtn(tab === 'student')}>
+          <button
+            type="button"
+            onClick={() => setTab('student')}
+            className={segmentedBtn(tab === 'student', 'right')}
+          >
             学生数据
           </button>
         </div>
@@ -348,24 +340,72 @@ export function MiniDataDashboardPanel({
 
       {tab === 'dashboard' ? (
         <>
-          <WechatCard className="p-4">
-            <div className="grid grid-cols-2 gap-3">
+          <WechatCard className="p-3">
+            <div className="grid grid-cols-2 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setDashboardTab('question')}
-                className={tabBtn(dashboardTab === 'question')}
+                className={segmentedBtn(dashboardTab === 'question', 'left')}
               >
                 题目 Top
               </button>
               <button
                 type="button"
                 onClick={() => setDashboardTab('knowledge')}
-                className={tabBtn(dashboardTab === 'knowledge')}
+                className={segmentedBtn(dashboardTab === 'knowledge', 'right')}
               >
                 知识点 Top
               </button>
             </div>
-            <div className="mt-3 text-xs text-black/50">按错误率排序（示例）。</div>
+            <div className="mt-2 text-xs text-black/50">
+              按错误率排序（示例）· 统计口径：{rangeLabel}
+            </div>
+
+            <div className="mt-2 grid grid-cols-1 gap-2">
+              <div className="space-y-1">
+                <div className="text-xs text-black/60">时间范围</div>
+                <select
+                  value={range}
+                  onChange={(e) => {
+                    const next = normalizeRangePreset(e.target.value)
+                    setRange(next)
+                    if (next !== 'custom') {
+                      setStart('')
+                      setEnd('')
+                    }
+                  }}
+                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+                >
+                  <option value="7d">最近7天</option>
+                  <option value="30d">最近30天</option>
+                  <option value="all">全部</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </div>
+
+              {range === 'custom' ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <div className="text-xs text-black/60">开始日期</div>
+                    <input
+                      type="date"
+                      value={start}
+                      onChange={(e) => setStart(e.target.value)}
+                      className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-black/60">结束日期</div>
+                    <input
+                      type="date"
+                      value={end}
+                      onChange={(e) => setEnd(e.target.value)}
+                      className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </WechatCard>
 
           <WechatCard>
@@ -386,7 +426,7 @@ export function MiniDataDashboardPanel({
             ) : null}
           </WechatCard>
 
-          <WechatCard className="p-4">
+          <WechatCard className="p-3">
             <div className="text-xs text-black/50">
               提示：从批次页点击学生可进入档案；在档案页可一键生成个人资料（题单与册子）。
               <span className="ml-2">
@@ -401,11 +441,11 @@ export function MiniDataDashboardPanel({
 
       {tab === 'student' ? (
         <>
-          <WechatCard className="p-4">
+          <WechatCard className="p-3">
             <div className="text-sm font-medium text-black">学生数据（原型）</div>
             <div className="mt-1 text-xs text-black/50">选择学生后，可查看时间轴、错题与薄弱点。</div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <div className="text-xs text-black/60">学生</div>
                 <select
@@ -436,19 +476,27 @@ export function MiniDataDashboardPanel({
             </div>
           </WechatCard>
 
-          <WechatCard className="p-4">
-            <div className="grid grid-cols-3 gap-3">
+          <WechatCard className="p-2">
+            <div className="grid grid-cols-3 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setStudentTab('timeline')}
-                className={tabBtn(studentTab === 'timeline')}
+                className={segmentedBtn(studentTab === 'timeline', 'left')}
               >
                 时间轴
               </button>
-              <button type="button" onClick={() => setStudentTab('wrong')} className={tabBtn(studentTab === 'wrong')}>
+              <button
+                type="button"
+                onClick={() => setStudentTab('wrong')}
+                className={segmentedBtn(studentTab === 'wrong', 'middle')}
+              >
                 错题（{wrongByStudent.length}）
               </button>
-              <button type="button" onClick={() => setStudentTab('weak')} className={tabBtn(studentTab === 'weak')}>
+              <button
+                type="button"
+                onClick={() => setStudentTab('weak')}
+                className={segmentedBtn(studentTab === 'weak', 'right')}
+              >
                 薄弱点
               </button>
             </div>

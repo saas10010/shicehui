@@ -7,16 +7,21 @@
 - 同时将“题目 Top / 知识点 Top”改为两个子 Tab 面板切换查看。
 
 ## 主要实现
-- 页面入口：`app/(mini)/mini/teacher/data/page.tsx` 保持不变，继续从 `searchParams.classId` 传入 `defaultClassId`。
+- 页面入口：`app/(mini)/mini/teacher/data/page.tsx`
+  - 从 `searchParams.classId` 传入 `defaultClassId`
+  - 当 URL 带 `classId` 时同时传入 `lockClassId=true`，默认隐藏“班级下拉选择”（入口已确认班级）。
 - 核心改动：`components/mini/teacher/data-dashboard-panel.tsx`
   - 新增外层 Tabs（本地 state）：`看板数据` / `学生数据`。
-  - 看板数据 Tab 内新增子 Tabs：`题目 Top` / `知识点 Top`，切换展示对应排行列表。
+  - 看板数据 Tab：
+    - `题目 Top` / `知识点 Top` 作为子 Tabs，切换展示对应排行列表。
+    - “时间范围”筛选仅放在看板数据下，避免在“学生数据”场景产生口径误解。
   - 学生数据 Tab：
     - 复用当前班级学生列表（`getStudentsByClassId(classId)`）提供“学生”下拉选择。
     - 提供学生侧子 Tabs：`时间轴` / `错题` / `薄弱点`。
     - 错题与薄弱点基于 `getWrongQuestionsByStudent(studentId)` 聚合展示（原型级别）。
     - 增加“查看学生档案”快捷入口，跳转到 `/mini/teacher/students/[studentId]?classId=...`。
   - 班级切换时：若当前选中学生不在新班级，自动回退为新班级第一个学生（`useEffect` 维护）。
+  - Tabs 按钮改为“分段控件”样式，并整体压缩区块间距，提升紧凑度。
 
 ## 约束与取舍
 - 原型范围内仅做前端交互与 mock 数据查询，不引入后端/持久化。

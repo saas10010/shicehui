@@ -12,6 +12,5 @@ export default async function TeacherMiniDataPage({
 }) {
   const sp = (await searchParams) ?? {}
   const classId = safePickFirst(sp.classId)
-  return <MiniDataDashboardPanel defaultClassId={classId} />
+  return <MiniDataDashboardPanel defaultClassId={classId} lockClassId={Boolean(classId)} />
 }
-
