@@ -273,25 +273,16 @@ export function BatchDetailPanel({
                     href={`/mini/teacher/classes/${classId}/batches/${batch.id}/grading?studentId=${encodeURIComponent(item.studentId)}`}
                   />
                   <WechatDivider />
-                  <div className="px-4 pb-3">
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href={`/mini/teacher/students/${item.studentId}?classId=${encodeURIComponent(classId)}`}
-                        className="text-xs text-[#07c160]"
-                      >
-                        打开档案
-                      </Link>
-                      <button
-                        type="button"
-                        className="text-xs text-black/60"
-                        onClick={() => {
-                          router.push(`/mini/teacher/classes/${classId}/batches/${batch.id}/grading?studentId=${encodeURIComponent(item.studentId)}`)
-                        }}
-                      >
-                        快速确认（进入批改确认）
-                      </button>
-                    </div>
-                  </div>
+	                  <div className="px-4 pb-3">
+	                    <div className="flex items-center gap-3">
+	                      <Link
+	                        href={`/mini/teacher/students/${item.studentId}?classId=${encodeURIComponent(classId)}`}
+	                        className="text-xs text-[#07c160]"
+	                      >
+	                        打开档案
+	                      </Link>
+	                    </div>
+	                  </div>
                   {idx === studentItems.length - 1 ? null : <WechatDivider />}
                 </React.Fragment>
               )

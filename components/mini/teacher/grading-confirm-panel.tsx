@@ -64,24 +64,8 @@ function safeWriteGradingConfirmed(batchId: string, ids: Set<string>) {
 
 type DraftUIStatus = '处理中' | '生成中' | '可确认'
 
-type DraftQuestion = {
-  id: string
-  title: string
-  score: number
-  correct: boolean
-}
-
 type DraftEdits = {
-  questions: DraftQuestion[]
   comment: string
-}
-
-function buildDraftQuestions(): DraftQuestion[] {
-  return [
-    { id: 'q1', title: '第1题：计算（初稿）', score: 5, correct: false },
-    { id: 'q2', title: '第2题：填空（初稿）', score: 5, correct: true },
-    { id: 'q3', title: '第3题：应用题（初稿）', score: 10, correct: false },
-  ]
 }
 
 function statusTone(status: DraftUIStatus | '已确认') {
@@ -104,19 +88,25 @@ export function MiniGradingConfirmPanel({
   const requestedStudentId = searchParams.get('studentId') ?? ''
 
   const [draftStatusByStudentId, setDraftStatusByStudentId] = React.useState<Record<string, DraftUIStatus>>({})
-  const [confirmedStudentIds, setConfirmedStudentIds] = React.useState<Set<string>>(() => new Set())
+  const [confirmedStudentIds, setConfirmedStudentIds] = React.useState<Set<string>>(() => safeReadGradingConfirmed(batchId))
   const generationTimersRef = React.useRef<Record<string, number>>({})
 
   const [activeStudentId, setActiveStudentId] = React.useState(() => {
-    const requested = requestedStudentId && items.some((i) => i.studentId === requestedStudentId) ? requestedStudentId : ''
-    return requested || items.find((i) => i.draftStatus === '可确认')?.studentId || items[0]?.studentId || ''
+    const initialConfirmed = safeReadGradingConfirmed(batchId)
+    const requested =
+      requestedStudentId && items.some((i) => i.studentId === requestedStudentId) ? requestedStudentId : ''
+    if (requested) return requested
+    const firstReady = items.find((i) => i.draftStatus === '可确认' && !initialConfirmed.has(i.studentId))?.studentId ?? ''
+    if (firstReady) return firstReady
+    const firstPending = items.find((i) => !initialConfirmed.has(i.studentId))?.studentId ?? ''
+    return firstPending || items[0]?.studentId || ''
   })
 
   const draftEditsRef = React.useRef<Record<string, DraftEdits>>({})
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
-  const [questions, setQuestions] = React.useState<DraftQuestion[]>(buildDraftQuestions())
   const [comment, setComment] = React.useState('')
+  const [hideConfirmed, setHideConfirmed] = React.useState(true)
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
 
@@ -131,6 +121,28 @@ export function MiniGradingConfirmPanel({
   React.useEffect(() => {
     setConfirmedStudentIds(safeReadGradingConfirmed(batchId))
   }, [batchId])
+
+  const confirmedCount = React.useMemo(() => {
+    const idSet = new Set(items.map((i) => i.studentId))
+    let count = 0
+    for (const id of confirmedStudentIds) {
+      if (idSet.has(id)) count += 1
+    }
+    return count
+  }, [confirmedStudentIds, items])
+
+  const canConfirmIds = React.useMemo(() => {
+    const ids: string[] = []
+    for (const i of items) {
+      if (confirmedStudentIds.has(i.studentId)) continue
+      if (getStudentDraftStatus(i) !== '可确认') continue
+      ids.push(i.studentId)
+    }
+    return ids
+  }, [confirmedStudentIds, getStudentDraftStatus, items])
+
+  const pendingCount = items.length - confirmedCount
+  const canConfirmCount = canConfirmIds.length
 
   React.useEffect(() => {
     // 恢复“生成中”状态
@@ -169,22 +181,55 @@ export function MiniGradingConfirmPanel({
     // 在切换学生前保存当前编辑
     const prevId = prevActiveStudentIdRef.current
     if (prevId) {
-      draftEditsRef.current[prevId] = { questions, comment }
+      draftEditsRef.current[prevId] = { comment }
     }
 
     if (activeStudentId) {
       const saved = draftEditsRef.current[activeStudentId]
       if (saved) {
-        setQuestions(saved.questions)
         setComment(saved.comment)
       } else {
-        setQuestions(buildDraftQuestions())
         setComment('')
       }
     }
 
     prevActiveStudentIdRef.current = activeStudentId || null
   }, [activeStudentId])
+
+  const findNextStudentId = React.useCallback(
+    (currentId: string, opts?: { includeNotReady?: boolean }) => {
+      const includeNotReady = Boolean(opts?.includeNotReady)
+      const currentIndex = items.findIndex((i) => i.studentId === currentId)
+
+      const isEligible = (i: BatchStudentItem) => {
+        if (confirmedStudentIds.has(i.studentId)) return false
+        const status = getStudentDraftStatus(i)
+        if (status === '可确认') return true
+        return includeNotReady
+      }
+
+      // 从当前项后面开始找一圈
+      for (let offset = 1; offset <= items.length; offset += 1) {
+        const idx = currentIndex >= 0 ? (currentIndex + offset) % items.length : offset % items.length
+        const candidate = items[idx]
+        if (!candidate) continue
+        if (isEligible(candidate)) return candidate.studentId
+      }
+
+      // 兜底：找第一个符合条件的
+      const fallback = items.find((i) => isEligible(i))?.studentId ?? ''
+      return fallback
+    },
+    [confirmedStudentIds, getStudentDraftStatus, items],
+  )
+
+  React.useEffect(() => {
+    if (!activeStudentId) return
+    if (!hideConfirmed) return
+    if (!confirmedStudentIds.has(activeStudentId)) return
+    const nextId = findNextStudentId(activeStudentId, { includeNotReady: true })
+    if (nextId && nextId !== activeStudentId) setActiveStudentId(nextId)
+  }, [activeStudentId, confirmedStudentIds, findNextStudentId, hideConfirmed])
 
   function triggerDraftRegenerate(studentId: string) {
     const now = Date.now()
@@ -214,6 +259,11 @@ export function MiniGradingConfirmPanel({
   const activeIsConfirmed = Boolean(active && confirmedStudentIds.has(active.studentId))
   const activeFinalStatus: DraftUIStatus | '已确认' = activeIsConfirmed ? '已确认' : activeDraftStatus
 
+  const visibleItems = React.useMemo(() => {
+    if (!hideConfirmed) return items
+    return items.filter((i) => !confirmedStudentIds.has(i.studentId))
+  }, [confirmedStudentIds, hideConfirmed, items])
+
   const evidencePages = React.useMemo(() => {
     const base = ['/evidence/page-1.svg', '/evidence/page-2.svg', '/evidence/page-3.svg']
     const count = Math.max(1, active?.imageCount ?? 1)
@@ -224,6 +274,44 @@ export function MiniGradingConfirmPanel({
     }))
   }, [active?.imageCount])
 
+  const evidenceMarks = React.useMemo(() => {
+    const seed = activeStudentId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
+    return evidencePages.map((p, idx) => {
+      const v = (seed + idx) % 5
+      const mark: '对' | '错' = v === 0 ? '错' : '对'
+      return { id: p.id, mark }
+    })
+  }, [activeStudentId, evidencePages])
+
+  function confirmActiveAndMaybeNext(behavior: 'stay' | 'next') {
+    if (!activeStudentId) return
+    if (activeIsConfirmed) return
+    if (activeDraftStatus !== '可确认') return
+
+    draftEditsRef.current[activeStudentId] = { comment }
+    setConfirmedStudentIds((prev) => {
+      const next = new Set(prev)
+      next.add(activeStudentId)
+      safeWriteGradingConfirmed(batchId, next)
+      return next
+    })
+
+    if (behavior === 'stay') {
+      toast.success('已确认（原型）')
+      return
+    }
+
+    const nextReadyId = findNextStudentId(activeStudentId, { includeNotReady: false })
+    const nextId = nextReadyId || findNextStudentId(activeStudentId, { includeNotReady: true })
+    if (!nextId || nextId === activeStudentId) {
+      toast.success('已确认，本批次已没有下一位（原型）')
+      return
+    }
+
+    setActiveStudentId(nextId)
+    toast.success('已确认，已切换到下一位（原型）')
+  }
+
   return (
     <div className="space-y-4">
       <WechatCard className="p-4">
@@ -231,7 +319,10 @@ export function MiniGradingConfirmPanel({
           <div>
             <div className="text-sm font-medium text-black">批改确认</div>
             <div className="mt-1 text-xs text-black/50">
-              低成本纠错与确认，形成最终记录（原型）。状态会写入 sessionStorage，用于批次页回显。
+              证据图上直接显示对/错（示例）。点“确认并下一位”即可连续处理。
+            </div>
+            <div className="mt-2 text-xs text-black/50">
+              进度：已确认 {confirmedCount}/{items.length} · 待确认 {pendingCount} · 当前可确认 {canConfirmCount}
             </div>
           </div>
           <WechatTag tone={statusTone(activeFinalStatus)}>{activeFinalStatus}</WechatTag>
@@ -247,8 +338,21 @@ export function MiniGradingConfirmPanel({
         </div>
       </WechatCard>
 
+      <WechatCard className="p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs text-black/50">学生列表</div>
+          <button
+            type="button"
+            className="text-xs font-medium text-[#07c160]"
+            onClick={() => setHideConfirmed((v) => !v)}
+          >
+            {hideConfirmed ? '显示已确认' : '只看待确认'}
+          </button>
+        </div>
+      </WechatCard>
+
       <WechatCard>
-        {items.map((i, idx) => {
+        {visibleItems.map((i, idx) => {
           const isActive = i.studentId === activeStudentId
           const isConfirmed = confirmedStudentIds.has(i.studentId)
           const draftStatus = getStudentDraftStatus(i)
@@ -261,7 +365,7 @@ export function MiniGradingConfirmPanel({
                 right={<WechatTag tone={statusTone(displayStatus)}>{displayStatus}</WechatTag>}
                 onClick={() => setActiveStudentId(i.studentId)}
               />
-              {idx === items.length - 1 ? null : <WechatDivider />}
+              {idx === visibleItems.length - 1 ? null : <WechatDivider />}
             </React.Fragment>
           )
         })}
@@ -273,128 +377,107 @@ export function MiniGradingConfirmPanel({
         </WechatCard>
       ) : (
         <div className="space-y-4">
-          <WechatCard className="p-4 space-y-3">
-            <div className="text-sm font-medium text-black">初稿（示例）</div>
-            <div className="space-y-2">
-              {questions.map((q) => (
-                <div key={q.id} className="rounded-xl border border-black/10 bg-white p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-black">{q.title}</div>
-                      <div className="mt-1 text-xs text-black/50">分值：{q.score}</div>
-                    </div>
-                    <label className="flex items-center gap-2 text-xs text-black/60">
-                      <input
-                        type="checkbox"
-                        checked={q.correct}
-                        disabled={activeIsConfirmed}
-                        onChange={(e) => {
-                          const checked = e.target.checked
-                          setQuestions((prev) =>
-                            prev.map((it) => (it.id === q.id ? { ...it, correct: checked } : it)),
-                          )
-                        }}
-                      />
-                      正确
-                    </label>
-                  </div>
-                </div>
-              ))}
+	          <WechatCard className="p-4 space-y-2">
+	            <div className="text-sm font-medium text-black">证据（示例：对/错直接叠在图上）</div>
+	            <div className="grid grid-cols-3 gap-2">
+	              {evidencePages.map((p, idx) => {
+	                const mark = evidenceMarks[idx]?.mark ?? '对'
+	                const isWrong = mark === '错'
+	                return (
+	                  <a
+	                    key={p.id}
+	                    href={p.src}
+	                    target="_blank"
+	                    rel="noreferrer"
+	                    className="rounded-xl border border-black/10 bg-white p-2 text-center text-xs text-black/60 active:bg-black/5"
+	                  >
+	                    <div className="relative">
+	                      <img src={p.src} alt={p.label} className="mx-auto h-16 w-full rounded-lg object-cover" />
+	                      <div
+	                        className={`absolute left-1 top-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${isWrong ? 'bg-red-500' : 'bg-emerald-500'}`}
+	                      >
+	                        {isWrong ? '错' : '对'}
+	                      </div>
+	                    </div>
+	                    <div className="mt-1">{p.label}</div>
+	                  </a>
+	                )
+	              })}
+	            </div>
+            <div className="text-xs text-black/50">
+              点击图片可查看大图（示例）。真实系统可在大图内展示题目框、对错标记与溯源信息。
             </div>
+          </WechatCard>
 
+          <WechatCard className="p-4 space-y-3">
             <div className="space-y-2">
-              <div className="text-sm font-medium text-black">评语/订正点（可选）</div>
+              <div className="text-sm font-medium text-black">备注/订正点（可选）</div>
               <textarea
                 value={comment}
                 disabled={activeIsConfirmed}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="例如：第3题注意列式，移项要变号。"
-                className="min-h-20 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+                placeholder="例如：第3题移项要变号。"
+                className="min-h-16 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-                onClick={() => {
-                  if (!activeStudentId) return
-                  setConfirmedStudentIds((prev) => {
-                    const next = new Set(prev)
-                    next.delete(activeStudentId)
-                    safeWriteGradingConfirmed(batchId, next)
-                    return next
-                  })
-                  triggerDraftRegenerate(activeStudentId)
-                  setQuestions(buildDraftQuestions())
-                  setComment('')
-                  toast.success('已触发重新识别，正在生成初稿（原型）')
-                }}
-              >
-                重新识别
-              </button>
-              <button
-                type="button"
-                className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
-                disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
-                onClick={() => {
-                  if (!activeStudentId) return
-                  draftEditsRef.current[activeStudentId] = { questions, comment }
-                  setConfirmedStudentIds((prev) => {
-                    const next = new Set(prev)
-                    next.add(activeStudentId)
-                    safeWriteGradingConfirmed(batchId, next)
-                    return next
-                  })
-                  toast.success('已确认保存（原型）')
-                }}
-              >
-                {activeIsConfirmed ? '已确认' : activeDraftStatus !== '可确认' ? '等待生成' : '确认保存'}
-              </button>
-            </div>
-
-            {activeIsConfirmed ? (
-              <button
-                type="button"
-                className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-                onClick={() => {
-                  if (!activeStudentId) return
-                  setConfirmedStudentIds((prev) => {
-                    const next = new Set(prev)
-                    next.delete(activeStudentId)
-                    safeWriteGradingConfirmed(batchId, next)
-                    return next
-                  })
-                  toast.message('已撤销确认，可继续修改（原型）')
-                }}
-              >
-                撤销确认
-              </button>
-            ) : null}
-          </WechatCard>
-
-          <WechatCard className="p-4 space-y-2">
-            <div className="text-sm font-medium text-black">证据（示例图片）</div>
-            <div className="grid grid-cols-3 gap-2">
-              {evidencePages.map((p) => (
-                <a
-                  key={p.id}
-                  href={p.src}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-xl border border-black/10 bg-white p-2 text-center text-xs text-black/60 active:bg-black/5"
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+                  onClick={() => {
+                    if (!activeStudentId) return
+                    setConfirmedStudentIds((prev) => {
+                      const next = new Set(prev)
+                      next.delete(activeStudentId)
+                      safeWriteGradingConfirmed(batchId, next)
+                      return next
+                    })
+                    triggerDraftRegenerate(activeStudentId)
+                    setComment('')
+                    toast.success('已触发重新识别，正在生成（原型）')
+                  }}
                 >
-                  <img
-                    src={p.src}
-                    alt={p.label}
-                    className="mx-auto h-16 w-full rounded-lg object-cover"
-                  />
-                  <div className="mt-1">{p.label}</div>
-                </a>
-              ))}
-            </div>
-            <div className="text-xs text-black/50">
-              原型说明：真实系统可展示题目定位、批改证据、溯源信息等。
+                  重新识别
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
+                  disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
+                  onClick={() => confirmActiveAndMaybeNext('next')}
+                >
+                  {activeIsConfirmed ? '已确认' : activeDraftStatus !== '可确认' ? '等待生成' : '确认并下一位'}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5 disabled:opacity-50"
+                disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
+                onClick={() => confirmActiveAndMaybeNext('stay')}
+              >
+                仅确认（停留在当前）
+              </button>
+
+              {activeIsConfirmed ? (
+                <button
+                  type="button"
+                  className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+                  onClick={() => {
+                    if (!activeStudentId) return
+                    setConfirmedStudentIds((prev) => {
+                      const next = new Set(prev)
+                      next.delete(activeStudentId)
+                      safeWriteGradingConfirmed(batchId, next)
+                      return next
+                    })
+                    toast.message('已撤销确认，可继续处理（原型）')
+                  }}
+                >
+                  撤销确认
+                </button>
+              ) : null}
             </div>
           </WechatCard>
         </div>
