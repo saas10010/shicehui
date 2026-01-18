@@ -32,8 +32,8 @@ export default function MiniRoleSwitchPage() {
       </div>
 
       <div className="mt-6">
-        <Link href="/" className="text-sm text-[#07c160]">
-          ← 返回入口页
+        <Link href="/studio" className="text-sm text-[#07c160]">
+          ← 原型实验室
         </Link>
       </div>
     </WechatPage>
