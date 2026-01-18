@@ -8,10 +8,17 @@ import {
   getClasses,
   getStudentsByClassId,
   getWrongQuestionsByClass,
+  getWrongQuestionsByStudent,
 } from '@/lib/mock/queries'
 import type { WrongQuestion } from '@/lib/mock/types'
 
 type DateRangePreset = '7d' | '30d' | 'all' | 'custom'
+
+type MainTab = 'dashboard' | 'student'
+
+type DashboardTab = 'question' | 'knowledge'
+
+type StudentTab = 'timeline' | 'wrong' | 'weak'
 
 type RankRow = {
   key: string
@@ -165,9 +172,13 @@ export function MiniDataDashboardPanel({
     if (defaultClassId && classes.some((c) => c.id === defaultClassId)) return defaultClassId
     return classes[0]?.id ?? ''
   })
+  const [tab, setTab] = React.useState<MainTab>('dashboard')
+  const [dashboardTab, setDashboardTab] = React.useState<DashboardTab>('question')
   const [range, setRange] = React.useState<DateRangePreset>('7d')
   const [start, setStart] = React.useState('')
   const [end, setEnd] = React.useState('')
+  const [studentId, setStudentId] = React.useState('')
+  const [studentTab, setStudentTab] = React.useState<StudentTab>('timeline')
 
   const wrongAll = React.useMemo(() => {
     if (!classId) return []
@@ -182,6 +193,13 @@ export function MiniDataDashboardPanel({
     if (!classId) return []
     return getStudentsByClassId(classId)
   }, [classId])
+
+  React.useEffect(() => {
+    setStudentId((prev) => {
+      if (prev && students.some((s) => s.id === prev)) return prev
+      return students[0]?.id ?? ''
+    })
+  }, [students])
 
   const studentNameById = React.useMemo(() => {
     return students.reduce<Record<string, string>>((acc, s) => {
@@ -202,6 +220,27 @@ export function MiniDataDashboardPanel({
       .slice(0, 8)
   }, [studentNameById, wrong])
 
+  const selectedStudent = React.useMemo(() => {
+    if (!students.length) return null
+    return students.find((s) => s.id === studentId) ?? students[0] ?? null
+  }, [studentId, students])
+
+  const wrongByStudent = React.useMemo(() => {
+    if (!selectedStudent) return []
+    return getWrongQuestionsByStudent(selectedStudent.id)
+  }, [selectedStudent])
+
+  const weakPoints = React.useMemo(() => {
+    return Object.entries(
+      wrongByStudent.reduce<Record<string, number>>((acc, q) => {
+        acc[q.knowledgePoint] = (acc[q.knowledgePoint] ?? 0) + 1
+        return acc
+      }, {}),
+    )
+      .map(([knowledgePoint, count]) => ({ knowledgePoint, count }))
+      .sort((a, b) => b.count - a.count)
+  }, [wrongByStudent])
+
   if (!classes.length) {
     return (
       <WechatCard className="p-6 text-center">
@@ -209,6 +248,9 @@ export function MiniDataDashboardPanel({
       </WechatCard>
     )
   }
+
+  const tabBtn = (active: boolean) =>
+    `rounded-xl px-3 py-3 text-center text-sm font-semibold ${active ? 'bg-[#07c160] text-white' : 'bg-white text-black ring-1 ring-black/10 active:bg-black/5'}`
 
   return (
     <div className="space-y-4">
@@ -294,61 +336,199 @@ export function MiniDataDashboardPanel({
       </WechatCard>
 
       <WechatCard className="p-4">
-        <div className="text-sm font-medium text-black">题目 Top</div>
-        <div className="mt-1 text-xs text-black/50">按错误率排序（示例）。</div>
-      </WechatCard>
-
-      <WechatCard>
-        {questionRanks.map((r, idx) => (
-          <React.Fragment key={r.key}>
-            <WechatCell
-              title={r.title}
-              description={`错题：${r.wrongCount} · 错误率：${percentLabel(r.errorRate)} · 涉及学生：${r.students.length}人`}
-              right={<WechatTag tone={r.errorRate >= 0.4 ? 'warning' : 'default'}>{percentLabel(r.errorRate)}</WechatTag>}
-            />
-            {idx === questionRanks.length - 1 ? null : <WechatDivider />}
-          </React.Fragment>
-        ))}
-        {!questionRanks.length ? (
-          <div className="px-4 py-10 text-center text-sm text-black/50">
-            暂无题目排行数据
-          </div>
-        ) : null}
-      </WechatCard>
-
-      <WechatCard className="p-4">
-        <div className="text-sm font-medium text-black">知识点 Top</div>
-        <div className="mt-1 text-xs text-black/50">按错误率排序（示例）。</div>
-      </WechatCard>
-
-      <WechatCard>
-        {knowledgeRanks.map((r, idx) => (
-          <React.Fragment key={r.key}>
-            <WechatCell
-              title={r.title}
-              description={`错题：${r.wrongCount} · 错误率：${percentLabel(r.errorRate)} · 涉及学生：${r.students.length}人`}
-              right={<WechatTag tone={r.errorRate >= 0.4 ? 'warning' : 'default'}>{percentLabel(r.errorRate)}</WechatTag>}
-            />
-            {idx === knowledgeRanks.length - 1 ? null : <WechatDivider />}
-          </React.Fragment>
-        ))}
-        {!knowledgeRanks.length ? (
-          <div className="px-4 py-10 text-center text-sm text-black/50">
-            暂无知识点排行数据
-          </div>
-        ) : null}
-      </WechatCard>
-
-      <WechatCard className="p-4">
-        <div className="text-xs text-black/50">
-          提示：从批次页点击学生可进入档案；在档案页可一键生成个人资料（题单与册子）。
-          <span className="ml-2">
-            <Link href="/mini/teacher/reinforce?tab=materials" className="text-[#07c160]">
-              去生成资料 →
-            </Link>
-          </span>
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" onClick={() => setTab('dashboard')} className={tabBtn(tab === 'dashboard')}>
+            看板数据
+          </button>
+          <button type="button" onClick={() => setTab('student')} className={tabBtn(tab === 'student')}>
+            学生数据
+          </button>
         </div>
       </WechatCard>
+
+      {tab === 'dashboard' ? (
+        <>
+          <WechatCard className="p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDashboardTab('question')}
+                className={tabBtn(dashboardTab === 'question')}
+              >
+                题目 Top
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardTab('knowledge')}
+                className={tabBtn(dashboardTab === 'knowledge')}
+              >
+                知识点 Top
+              </button>
+            </div>
+            <div className="mt-3 text-xs text-black/50">按错误率排序（示例）。</div>
+          </WechatCard>
+
+          <WechatCard>
+            {(dashboardTab === 'question' ? questionRanks : knowledgeRanks).map((r, idx, arr) => (
+              <React.Fragment key={r.key}>
+                <WechatCell
+                  title={r.title}
+                  description={`错题：${r.wrongCount} · 错误率：${percentLabel(r.errorRate)} · 涉及学生：${r.students.length}人`}
+                  right={<WechatTag tone={r.errorRate >= 0.4 ? 'warning' : 'default'}>{percentLabel(r.errorRate)}</WechatTag>}
+                />
+                {idx === arr.length - 1 ? null : <WechatDivider />}
+              </React.Fragment>
+            ))}
+            {!(dashboardTab === 'question' ? questionRanks : knowledgeRanks).length ? (
+              <div className="px-4 py-10 text-center text-sm text-black/50">
+                {dashboardTab === 'question' ? '暂无题目排行数据' : '暂无知识点排行数据'}
+              </div>
+            ) : null}
+          </WechatCard>
+
+          <WechatCard className="p-4">
+            <div className="text-xs text-black/50">
+              提示：从批次页点击学生可进入档案；在档案页可一键生成个人资料（题单与册子）。
+              <span className="ml-2">
+                <Link href="/mini/teacher/reinforce?tab=materials" className="text-[#07c160]">
+                  去生成资料 →
+                </Link>
+              </span>
+            </div>
+          </WechatCard>
+        </>
+      ) : null}
+
+      {tab === 'student' ? (
+        <>
+          <WechatCard className="p-4">
+            <div className="text-sm font-medium text-black">学生数据（原型）</div>
+            <div className="mt-1 text-xs text-black/50">选择学生后，可查看时间轴、错题与薄弱点。</div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <div className="text-xs text-black/60">学生</div>
+                <select
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+                >
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-black/60">快捷入口</div>
+                <Link
+                  href={
+                    selectedStudent
+                      ? `/mini/teacher/students/${encodeURIComponent(selectedStudent.id)}?classId=${encodeURIComponent(classId)}`
+                      : '#'
+                  }
+                  className="block w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-center text-sm text-[#07c160] active:bg-black/5"
+                >
+                  查看学生档案 →
+                </Link>
+              </div>
+            </div>
+          </WechatCard>
+
+          <WechatCard className="p-4">
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setStudentTab('timeline')}
+                className={tabBtn(studentTab === 'timeline')}
+              >
+                时间轴
+              </button>
+              <button type="button" onClick={() => setStudentTab('wrong')} className={tabBtn(studentTab === 'wrong')}>
+                错题（{wrongByStudent.length}）
+              </button>
+              <button type="button" onClick={() => setStudentTab('weak')} className={tabBtn(studentTab === 'weak')}>
+                薄弱点
+              </button>
+            </div>
+          </WechatCard>
+
+          {students.length > 0 && selectedStudent ? null : (
+            <WechatCard className="p-6 text-center">
+              <div className="text-sm text-black/50">暂无学生数据</div>
+            </WechatCard>
+          )}
+
+          {studentTab === 'timeline' && selectedStudent ? (
+            <WechatCard className="p-4 space-y-3">
+              <div className="text-sm font-medium text-black">时间轴（原型）</div>
+              <div className="text-xs text-black/50">
+                按批次/日期聚合展示批改与错题沉淀（原型用错题时间替代完整批次记录）。
+              </div>
+              <div className="space-y-2">
+                {wrongByStudent.map((q) => (
+                  <div key={q.id} className="rounded-xl border border-black/10 bg-white p-3">
+                    <div className="text-sm font-medium text-black">{q.title}</div>
+                    <div className="mt-1 text-xs text-black/50">
+                      {q.createdAt} · 知识点：{q.knowledgePoint} · 批次：{q.batchId}
+                    </div>
+                  </div>
+                ))}
+                {!wrongByStudent.length ? (
+                  <div className="py-10 text-center text-sm text-black/50">
+                    暂无错题记录
+                  </div>
+                ) : null}
+              </div>
+            </WechatCard>
+          ) : null}
+
+          {studentTab === 'wrong' && selectedStudent ? (
+            <WechatCard className="p-4 space-y-3">
+              <div className="text-sm font-medium text-black">错题列表</div>
+              <div className="text-xs text-black/50">包含题目、时间、批次、知识点标签等字段（原型）。</div>
+              <div className="space-y-2">
+                {wrongByStudent.map((q, idx) => (
+                  <div key={q.id}>
+                    <WechatCell
+                      title={q.title}
+                      description={`知识点：${q.knowledgePoint} · 批次：${q.batchId} · ${q.createdAt}`}
+                      right={<WechatTag tone="default">已完成</WechatTag>}
+                    />
+                    {idx === wrongByStudent.length - 1 ? null : <WechatDivider />}
+                  </div>
+                ))}
+                {!wrongByStudent.length ? (
+                  <div className="py-10 text-center text-sm text-black/50">
+                    暂无错题
+                  </div>
+                ) : null}
+              </div>
+            </WechatCard>
+          ) : null}
+
+          {studentTab === 'weak' && selectedStudent ? (
+            <WechatCard className="p-4 space-y-3">
+              <div className="text-sm font-medium text-black">薄弱点概览</div>
+              <div className="text-xs text-black/50">按知识点聚合，按错误数量排序（原型）。</div>
+              <div className="space-y-2">
+                {weakPoints.map((w) => (
+                  <div key={w.knowledgePoint} className="rounded-xl border border-black/10 bg-white p-3">
+                    <div className="text-sm font-medium text-black">{w.knowledgePoint}</div>
+                    <div className="mt-1 text-xs text-black/50">错误次数：{w.count}</div>
+                  </div>
+                ))}
+                {!weakPoints.length ? (
+                  <div className="py-10 text-center text-sm text-black/50">
+                    暂无薄弱点数据
+                  </div>
+                ) : null}
+              </div>
+            </WechatCard>
+          ) : null}
+        </>
+      ) : null}
     </div>
   )
 }
