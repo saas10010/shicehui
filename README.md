@@ -91,3 +91,113 @@ vercel --prod
 ### 预览部署
 
 每次提交代码到 GitHub，Vercel 会自动创建预览部署，可通过 PR 中的链接查看效果。
+
+---
+
+## 自建服务器部署（PM2）
+
+### 准备工作
+
+1. **服务器要求**
+   - Node.js 18+（推荐使用 nvm 管理）
+   - pnpm: `npm install -g pnpm`
+   - PM2: `npm install -g pm2`
+
+2. **服务器开放端口**
+   - 默认端口 3000，或自定义端口
+
+### 部署步骤
+
+1. **构建生产版本**
+   ```bash
+   pnpm install
+   pnpm build
+   ```
+
+2. **服务器配置**
+
+   如果使用 Nginx 反向代理，配置示例：
+
+   ```nginx
+   server {
+       listen 80;
+       server_name your-domain.com;
+
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+   ```
+
+3. **启动 PM2**
+
+   创建 `ecosystem.config.js`（可选）：
+
+   ```javascript
+   module.exports = {
+     apps: [{
+       name: 'shicehui',
+       script: 'npm',
+       args: 'start',
+       cwd: '/path/to/your/project',
+       instances: 'max',
+       exec_mode: 'cluster',
+       env: {
+         NODE_ENV: 'production',
+         PORT: 3000
+       }
+     }]
+   };
+   ```
+
+   启动应用：
+   ```bash
+   # 直接启动
+   pm2 start pnpm --name "shicehui" -- start
+
+   # 或使用 ecosystem 配置
+   pm2 start ecosystem.config.js
+   ```
+
+4. **PM2 常用命令**
+
+   ```bash
+   # 查看状态
+   pm2 status
+
+   # 查看日志
+   pm2 logs shicehui
+
+   # 重启
+   pm2 restart shicehui
+
+   # 停止
+   pm2 stop shicehui
+
+   # 删除
+   pm2 delete shicehui
+
+   # 保存进程列表（开机自启）
+   pm2 save
+
+   # 设置开机自启
+   pm2 startup
+   ```
+
+### 更新部署
+
+```bash
+# 拉取最新代码
+git pull
+
+# 重新构建
+   pnpm build
+
+# 重启 PM2
+pm2 restart shicehui
+```
