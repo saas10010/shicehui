@@ -27,7 +27,8 @@ async function loginAction(formData: FormData) {
     sameSite: 'lax',
   })
 
-  const safeNext = safeNextPathOrEmpty(nextPath) || '/classes'
+  // 客户确认仅保留小程序端，这里默认跳转到小程序入口（仍保留登录页用于原型兼容/回归）。
+  const safeNext = safeNextPathOrEmpty(nextPath) || '/mini'
   redirect(safeNext)
 }
 

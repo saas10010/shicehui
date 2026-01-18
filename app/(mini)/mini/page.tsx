@@ -7,7 +7,7 @@ export default function MiniRoleSwitchPage() {
       <WechatCard>
         <WechatCell
           title="教师端"
-          description="连拍采集 → 上传队列 → 批次入口（Web 优先）"
+          description="连拍采集 → 上传队列 → 班级/作业/批次 → 异常处理 → 批改确认 → 看板/档案 → 巩固中心"
           right={<WechatTag tone="success">演示</WechatTag>}
           href="/mini/teacher/capture"
         />
@@ -39,4 +39,3 @@ export default function MiniRoleSwitchPage() {
     </WechatPage>
   )
 }
-

@@ -13,11 +13,11 @@ export default function StudioPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { title: '班级列表', desc: '建班/导入/进入班级', href: '/classes' },
-          { title: '数据看板', desc: '题目/知识点排行', href: '/data' },
-          { title: '巩固中心', desc: '题单/册子 + 练习任务（原型）', href: '/reinforce' },
-          { title: '设置', desc: '偏好开关（原型）', href: '/settings' },
-          { title: '登录页', desc: '演示未登录跳转', href: '/login' },
+          { title: '班级', desc: '班级/学生/二维码/批次', href: '/mini/teacher/classes' },
+          { title: '作业', desc: '聚合查看批次进度与异常', href: '/mini/teacher/homework' },
+          { title: '数据看板', desc: '题目/知识点排行（原型）', href: '/mini/teacher/data' },
+          { title: '巩固中心', desc: '题单/册子 + 练习任务（原型）', href: '/mini/teacher/reinforce' },
+          { title: '设置', desc: '偏好开关（原型）', href: '/mini/teacher/settings' },
         ].map((item) => (
           <Link href={item.href} key={item.href} className="block">
             <Card className="border-4 border-black rounded-xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:translate-y-[-4px] transition-transform h-full">

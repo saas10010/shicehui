@@ -16,12 +16,12 @@ export default function StudioLayout({
         <header className="border-b-4 border-black p-4 sm:p-6 bg-white/40 backdrop-blur-md">
           <div className="flex justify-between items-center gap-4">
             <div className="flex items-center gap-3">
-              <Link href="/classes">
+              <Link href="/mini">
                 <Button variant="outline" size="icon" className="rounded-xl border-2 border-black">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/classes">
+              <Link href="/">
                 <Button variant="outline" size="icon" className="rounded-xl border-2 border-black">
                   <Home className="h-5 w-5" />
                 </Button>

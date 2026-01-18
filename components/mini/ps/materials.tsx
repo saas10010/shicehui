@@ -66,16 +66,16 @@ export function MiniMaterials({ role }: { role: MiniRole }) {
             {idx === jobs.length - 1 ? null : <WechatDivider />}
           </div>
         ))}
-        {!jobs.length ? (
-          <div className="px-4 py-10 text-center text-sm text-black/50">
-            暂无记录（你可以先在教师端“题单与册子”生成一条记录）
-          </div>
-        ) : null}
+      {!jobs.length ? (
+        <div className="px-4 py-10 text-center text-sm text-black/50">
+          暂无记录（你可以先在教师端“题单与册子”生成一条记录）
+        </div>
+      ) : null}
       </WechatCard>
 
       <div className="text-xs text-black/50">
-        <Link href="/materials" className="text-[#07c160]">
-          去教师端生成资料 →
+        <Link href="/mini/teacher/reinforce?tab=materials" className="text-[#07c160]">
+          去教师端小程序生成资料 →
         </Link>
       </div>
     </div>
