@@ -106,7 +106,8 @@ export function MiniGradingConfirmPanel({
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
   const [comment, setComment] = React.useState('')
-  const [previewPageId, setPreviewPageId] = React.useState<string | null>(null)
+  const [activeEvidenceIndex, setActiveEvidenceIndex] = React.useState(0)
+  const touchStartXRef = React.useRef<number | null>(null)
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
 
@@ -197,7 +198,7 @@ export function MiniGradingConfirmPanel({
   }, [activeStudentId])
 
   React.useEffect(() => {
-    setPreviewPageId(null)
+    setActiveEvidenceIndex(0)
   }, [activeStudentId])
 
   const findNextStudentId = React.useCallback(
@@ -289,17 +290,42 @@ export function MiniGradingConfirmPanel({
     })
   }, [activeStudentId, evidencePages])
 
-  const previewPage = React.useMemo(() => {
-    if (!previewPageId) return null
-    return evidencePages.find((p) => p.id === previewPageId) ?? null
-  }, [evidencePages, previewPageId])
+  const activeEvidencePage = evidencePages[activeEvidenceIndex] ?? null
+  const activeEvidenceMarks = React.useMemo(() => {
+    if (!activeEvidencePage) return []
+    return evidenceMarks.find((m) => m.pageId === activeEvidencePage.id)?.marks ?? []
+  }, [activeEvidencePage, evidenceMarks])
 
-  const previewMarks = React.useMemo(() => {
-    if (!previewPageId) return []
-    return evidenceMarks.find((m) => m.pageId === previewPageId)?.marks ?? []
-  }, [evidenceMarks, previewPageId])
+  React.useEffect(() => {
+    if (activeEvidenceIndex < 0) setActiveEvidenceIndex(0)
+    if (activeEvidenceIndex >= evidencePages.length) setActiveEvidenceIndex(Math.max(0, evidencePages.length - 1))
+  }, [activeEvidenceIndex, evidencePages.length])
 
-  function confirmActiveAndMaybeNext(behavior: 'stay' | 'next') {
+  React.useEffect(() => {
+    if (!active) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target
+      if (
+        target instanceof HTMLElement &&
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      ) {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        setActiveEvidenceIndex((idx) => Math.max(0, idx - 1))
+      }
+      if (e.key === 'ArrowRight') {
+        setActiveEvidenceIndex((idx) => Math.min(evidencePages.length - 1, idx + 1))
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [active, evidencePages.length])
+
+  function confirmActiveAndGoNext() {
     if (!activeStudentId) return
     if (activeIsConfirmed) return
     if (activeDraftStatus !== '可确认') return
@@ -311,11 +337,6 @@ export function MiniGradingConfirmPanel({
       safeWriteGradingConfirmed(batchId, next)
       return next
     })
-
-    if (behavior === 'stay') {
-      toast.success('已确认（原型）')
-      return
-    }
 
     const nextReadyId = findNextStudentId(activeStudentId, { includeNotReady: false })
     const nextId = nextReadyId || findNextStudentId(activeStudentId, { includeNotReady: true })
@@ -386,76 +407,104 @@ export function MiniGradingConfirmPanel({
         <div className="space-y-4">
           <WechatCard className="p-4 space-y-2">
             <div className="text-sm font-medium text-black">证据（示例：在图片里直接画 ✓/✗）</div>
-            <div className="grid grid-cols-3 gap-2">
-              {evidencePages.map((p) => {
-                const marks = evidenceMarks.find((m) => m.pageId === p.id)?.marks ?? []
-                return (
-                  <button
-                    type="button"
-                    key={p.id}
-                    className="rounded-xl border border-black/10 bg-white p-2 text-center text-xs text-black/60 active:bg-black/5"
-                    onClick={() => setPreviewPageId(p.id)}
-                  >
-                    <div className="relative overflow-hidden">
-                      <img src={p.src} alt={p.label} className="mx-auto h-16 w-full rounded-lg object-cover" />
-                      <div className="pointer-events-none absolute inset-0 z-10">
-                        {marks.map((m) => {
-                          const isWrong = m.kind === 'wrong'
-                          return (
-                            <div
-                              key={m.id}
-                              className="absolute"
-                              style={{
-                                left: `${m.xPct}%`,
-                                top: `${m.yPct}%`,
-                                transform: `rotate(${m.rotateDeg}deg)`,
-                              }}
-                            >
-                              <svg
-                                aria-hidden="true"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                className="drop-shadow-[0_1px_0_rgba(0,0,0,0.2)]"
-                              >
-                                {isWrong ? (
-                                  <>
-                                    <path
-                                      d="M6 6 L18 18"
-                                      stroke="rgba(239, 68, 68, 0.95)"
-                                      strokeWidth="3"
-                                      strokeLinecap="round"
-                                    />
-                                    <path
-                                      d="M18 6 L6 18"
-                                      stroke="rgba(239, 68, 68, 0.95)"
-                                      strokeWidth="3"
-                                      strokeLinecap="round"
-                                    />
-                                  </>
-                                ) : (
-                                  <path
-                                    d="M5 13 L10 18 L19 7"
-                                    stroke="rgba(16, 185, 129, 0.95)"
-                                    strokeWidth="3"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    fill="none"
-                                  />
-                                )}
-                              </svg>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                    <div className="mt-1">{p.label}</div>
-                  </button>
-                )
-              })}
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-black/50">
+                {activeEvidencePage ? `${activeEvidencePage.label}（${activeEvidenceIndex + 1}/${evidencePages.length}）` : '—'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-black ring-1 ring-black/10 active:bg-black/5 disabled:opacity-40"
+                  disabled={activeEvidenceIndex <= 0}
+                  onClick={() => setActiveEvidenceIndex((idx) => Math.max(0, idx - 1))}
+                >
+                  上一张
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-black ring-1 ring-black/10 active:bg-black/5 disabled:opacity-40"
+                  disabled={activeEvidenceIndex >= evidencePages.length - 1}
+                  onClick={() => setActiveEvidenceIndex((idx) => Math.min(evidencePages.length - 1, idx + 1))}
+                >
+                  下一张
+                </button>
+              </div>
             </div>
+
+            {activeEvidencePage ? (
+              <div
+                className="relative overflow-hidden rounded-xl border border-black/10 bg-white"
+                onTouchStart={(e) => {
+                  touchStartXRef.current = e.touches[0]?.clientX ?? null
+                }}
+                onTouchEnd={(e) => {
+                  const startX = touchStartXRef.current
+                  touchStartXRef.current = null
+                  const endX = e.changedTouches[0]?.clientX ?? null
+                  if (startX == null || endX == null) return
+                  const delta = endX - startX
+                  if (Math.abs(delta) < 30) return
+                  if (delta > 0) setActiveEvidenceIndex((idx) => Math.max(0, idx - 1))
+                  else setActiveEvidenceIndex((idx) => Math.min(evidencePages.length - 1, idx + 1))
+                }}
+              >
+                <img
+                  src={activeEvidencePage.src}
+                  alt={activeEvidencePage.label}
+                  className="block h-auto w-full max-h-[60vh] object-contain"
+                />
+                <div className="pointer-events-none absolute inset-0">
+                  {activeEvidenceMarks.map((m) => {
+                    const isWrong = m.kind === 'wrong'
+                    return (
+                      <div
+                        key={m.id}
+                        className="absolute"
+                        style={{
+                          left: `${m.xPct}%`,
+                          top: `${m.yPct}%`,
+                          transform: `rotate(${m.rotateDeg}deg)`,
+                        }}
+                      >
+                        <svg aria-hidden="true" width="56" height="56" viewBox="0 0 24 24">
+                          {isWrong ? (
+                            <>
+                              <path
+                                d="M6 6 L18 18"
+                                stroke="rgba(239, 68, 68, 0.95)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                              />
+                              <path
+                                d="M18 6 L6 18"
+                                stroke="rgba(239, 68, 68, 0.95)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                              />
+                            </>
+                          ) : (
+                            <path
+                              d="M5 13 L10 18 L19 7"
+                              stroke="rgba(16, 185, 129, 0.95)"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          )}
+                        </svg>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-black/10 bg-white p-6 text-center text-sm text-black/50">
+                暂无图片
+              </div>
+            )}
             <div className="text-xs text-black/50">
-              点任意图片可查看大图（示例）。真实系统可在大图内展示题目框、对错标记与溯源信息。
+              左右滑动或点“上一张/下一张”切换（示例）。真实系统可在图上展示题目框、对错标记与溯源信息。
             </div>
           </WechatCard>
 
@@ -495,20 +544,11 @@ export function MiniGradingConfirmPanel({
                   type="button"
                   className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
                   disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
-                  onClick={() => confirmActiveAndMaybeNext('next')}
+                  onClick={() => confirmActiveAndGoNext()}
                 >
                   {activeIsConfirmed ? '已确认' : activeDraftStatus !== '可确认' ? '等待生成' : '确认并下一位'}
                 </button>
               </div>
-
-              <button
-                type="button"
-                className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5 disabled:opacity-50"
-                disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
-                onClick={() => confirmActiveAndMaybeNext('stay')}
-              >
-                仅确认（停留在当前）
-              </button>
 
               {activeIsConfirmed ? (
                 <button
@@ -532,76 +572,6 @@ export function MiniGradingConfirmPanel({
           </WechatCard>
         </div>
       )}
-
-      {previewPage ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-3">
-            <div className="flex items-center justify-between gap-3 px-1 py-1">
-              <div className="text-sm font-semibold text-black">大图预览：{previewPage.label}</div>
-              <button
-                type="button"
-                className="rounded-full bg-black/5 px-3 py-1 text-sm font-semibold text-black active:bg-black/10"
-                onClick={() => setPreviewPageId(null)}
-              >
-                关闭
-              </button>
-            </div>
-
-            <div className="mt-2">
-              <div className="relative overflow-hidden rounded-xl border border-black/10 bg-white">
-                <img src={previewPage.src} alt={previewPage.label} className="block h-auto w-full object-contain" />
-                <div className="pointer-events-none absolute inset-0">
-                  {previewMarks.map((m) => {
-                    const isWrong = m.kind === 'wrong'
-                    return (
-                      <div
-                        key={m.id}
-                        className="absolute"
-                        style={{
-                          left: `${m.xPct}%`,
-                          top: `${m.yPct}%`,
-                          transform: `rotate(${m.rotateDeg}deg)`,
-                        }}
-                      >
-                        <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24">
-                          {isWrong ? (
-                            <>
-                              <path
-                                d="M6 6 L18 18"
-                                stroke="rgba(239, 68, 68, 0.95)"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                              />
-                              <path
-                                d="M18 6 L6 18"
-                                stroke="rgba(239, 68, 68, 0.95)"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                              />
-                            </>
-                          ) : (
-                            <path
-                              d="M5 13 L10 18 L19 7"
-                              stroke="rgba(16, 185, 129, 0.95)"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              fill="none"
-                            />
-                          )}
-                        </svg>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-black/50">
-                标注为示例叠加（原型）。真实系统应由识别定位结果驱动。
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
