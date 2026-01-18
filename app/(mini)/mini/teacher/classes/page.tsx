@@ -12,7 +12,7 @@ export default function TeacherClassesPage() {
           <div>
             <div className="text-sm font-medium text-black">班级</div>
             <div className="mt-1 text-xs text-black/50">
-              小程序端覆盖教师端完整功能项：班级/作业/批次/批改确认/看板/档案/巩固中心/设置。
+              本页仅支持创建班级与进入班级；班级内管理请进入对应班级详情页。
             </div>
           </div>
           <WechatTag tone="success">已迁移</WechatTag>
@@ -20,32 +20,6 @@ export default function TeacherClassesPage() {
       </WechatCard>
 
       <MiniClassActionsPanel />
-
-      <WechatCard>
-        <WechatCell
-          title="作业"
-          description="聚合查看各班批次进度与异常"
-          href="/mini/teacher/homework"
-        />
-        <WechatDivider />
-        <WechatCell
-          title="数据看板"
-          description="题目/知识点排行与样例数据"
-          href="/mini/teacher/data"
-        />
-        <WechatDivider />
-        <WechatCell
-          title="巩固中心"
-          description="题单与册子 / 练习任务"
-          href="/mini/teacher/reinforce"
-        />
-        <WechatDivider />
-        <WechatCell
-          title="设置"
-          description="偏好开关与缓存清理（原型）"
-          href="/mini/teacher/settings"
-        />
-      </WechatCard>
 
       <WechatCard>
         {classes.map((c, idx) => (

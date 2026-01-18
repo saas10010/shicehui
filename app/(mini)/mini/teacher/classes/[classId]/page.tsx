@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
+import { MiniClassManagementPanel } from '@/components/mini/teacher/class-management-panel'
 import { getClassById } from '@/lib/mock/queries'
 
 export default async function TeacherClassDetailPage({
@@ -64,7 +65,8 @@ export default async function TeacherClassDetailPage({
           href={`/mini/teacher/data?classId=${encodeURIComponent(classId)}`}
         />
       </WechatCard>
+
+      <MiniClassManagementPanel classId={classId} />
     </div>
   )
 }
-

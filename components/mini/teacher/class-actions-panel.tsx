@@ -3,11 +3,9 @@
 import * as React from 'react'
 import { toast } from 'sonner'
 
-import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
+import { WechatCard, WechatCell, WechatTag } from '@/components/mini/wechat-shell'
 
 export function MiniClassActionsPanel() {
-  const fileRef = React.useRef<HTMLInputElement | null>(null)
-
   return (
     <WechatCard>
       <WechatCell
@@ -24,26 +22,6 @@ export function MiniClassActionsPanel() {
           toast.success(`已创建班级：${name}${subject ? ` · ${subject}` : ''}（原型未持久化）`)
         }}
       />
-      <WechatDivider />
-      <WechatCell
-        title="导入学生"
-        description="原型：选择文件后模拟导入结果"
-        right={<WechatTag tone="default">原型</WechatTag>}
-        onClick={() => fileRef.current?.click()}
-      />
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".xlsx,.csv"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          toast.success(`导入完成：成功 38 条，失败 2 条（原型模拟）\n文件：${file.name}`)
-          e.target.value = ''
-        }}
-      />
     </WechatCard>
   )
 }
-
