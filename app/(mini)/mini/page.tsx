@@ -21,9 +21,9 @@ export default function MiniRoleSwitchPage() {
         <WechatDivider />
         <WechatCell
           title="学生端"
-          description="练习任务列表 → 作答 → 提交"
+          description="资料下载（历史错题/错题变体）"
           right={<WechatTag tone="default">演示</WechatTag>}
-          href="/mini/ps/tasks?role=student"
+          href="/mini/ps/materials?role=student"
         />
       </WechatCard>
 

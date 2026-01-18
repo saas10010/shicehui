@@ -24,7 +24,7 @@ export default function TeacherMePage() {
         <WechatDivider />
         <WechatCell
           title="巩固中心"
-          description="题单与册子 / 练习任务"
+          description="题单与册子 / 历史错题 / 错题变体"
           href="/mini/teacher/reinforce"
         />
         <WechatDivider />

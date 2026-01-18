@@ -3,7 +3,8 @@ import { ReinforceCenter, type ReinforceTab } from '@/components/reinforce/reinf
 export const dynamic = 'force-dynamic'
 
 function normalizeTab(value: unknown): ReinforceTab {
-  return value === 'tasks' ? 'tasks' : 'materials'
+  void value
+  return 'materials'
 }
 
 export default async function ReinforcePage({
@@ -20,4 +21,3 @@ export default async function ReinforcePage({
 
   return <ReinforceCenter defaultTab={tab} defaultStudentId={studentId} />
 }
-

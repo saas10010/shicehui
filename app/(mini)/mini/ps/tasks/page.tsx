@@ -1,5 +1,5 @@
-import { MiniTasks } from '@/components/mini/ps/tasks'
 import { safeRole } from '@/lib/mini/ps'
+import { redirect } from 'next/navigation'
 
 export default async function PsTasksPage({
   searchParams,
@@ -8,5 +8,5 @@ export default async function PsTasksPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {}
   const role = safeRole(resolvedSearchParams.role)
-  return <MiniTasks role={role} />
+  redirect(`/mini/ps/materials?role=${role}`)
 }

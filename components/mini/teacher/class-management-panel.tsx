@@ -36,7 +36,7 @@ export function MiniClassReinforceCell({ classId }: { classId: string }) {
   return (
     <WechatCell
       title="巩固中心"
-      description="题单与册子 / 练习任务（本班）"
+      description="题单与册子 / 历史错题 / 错题变体（本班）"
       href={`/mini/teacher/reinforce?classId=${encodeURIComponent(classId)}`}
     />
   )

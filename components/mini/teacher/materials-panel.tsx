@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 import type { PdfJob, PdfJobType } from '@/lib/mock/types'
 import { CLASSES, STUDENTS } from '@/lib/mock/data'
-import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
+import { WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
 
 const STORAGE_KEY = 'shicehui:pdfJobs'
 
@@ -132,15 +132,16 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
   const studentTargetLabel = studentClass ? `${studentClass.name} · ${studentLabel}` : studentLabel
 
   return (
-    <div className="space-y-4">
-      <WechatCard className="p-4">
+    <div>
+      <div className="p-4">
         <div className="text-sm font-medium text-black">题单与册子</div>
         <div className="mt-1 text-xs text-black/50">
-          把学情数据转化为可交付物：全班题单 / 个人练习册 / 个人复习册（原型）。
+          把学情数据转化为可交付物：全班题单 / 个人历史错题 / 个人错题变体（原型）。
         </div>
-      </WechatCard>
+      </div>
+      <WechatDivider />
 
-      <WechatCard className="p-4 space-y-3">
+      <div className="p-4 space-y-3">
         <div className="text-sm font-medium text-black">生成参数</div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -252,10 +253,10 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
                 toast.error('请选择学生')
                 return
               }
-              createJob('个人练习册', studentTargetLabel)
+              createJob('个人历史错题', studentTargetLabel)
             }}
           >
-            生成练习册
+            生成历史错题
           </button>
           <button
             type="button"
@@ -265,15 +266,21 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
                 toast.error('请选择学生')
                 return
               }
-              createJob('个人复习册', studentTargetLabel)
+              createJob('个人错题变体', studentTargetLabel)
             }}
           >
-            生成复习册
+            生成错题变体
           </button>
         </div>
-      </WechatCard>
+      </div>
 
-      <WechatCard>
+      <WechatDivider />
+      <div className="p-4">
+        <div className="text-sm font-medium text-black">生成记录</div>
+        <div className="mt-1 text-xs text-black/50">已完成的记录可点击下载占位文件</div>
+      </div>
+      <WechatDivider />
+      <div>
         {jobs.map((j, idx) => (
           <React.Fragment key={j.id}>
             <WechatCell
@@ -290,14 +297,14 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
             暂无生成记录
           </div>
         ) : null}
-      </WechatCard>
+      </div>
 
-      <WechatCard className="p-4">
+      <WechatDivider />
+      <div className="p-4">
         <div className="text-xs text-black/50">
           原型说明：真实系统应返回 PDF 并支持队列、失败重试与权限控制（FR11/FR12）。
         </div>
-      </WechatCard>
+      </div>
     </div>
   )
 }
-

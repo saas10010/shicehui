@@ -11,13 +11,10 @@ export default async function TeacherMiniReinforcePage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }) {
   const sp = (await searchParams) ?? {}
-  const tab = safePickFirst(sp.tab)
   const studentId = safePickFirst(sp.studentId)
   return (
     <MiniReinforcePanel
-      defaultTab={tab === 'tasks' ? 'tasks' : 'materials'}
       defaultStudentId={studentId || undefined}
     />
   )
 }
-

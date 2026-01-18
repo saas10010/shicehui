@@ -57,7 +57,14 @@ export type WrongQuestion = {
   createdAt: string
 }
 
-export type PdfJobType = '全班易错题单' | '个人练习册' | '个人复习册' | '个人练习册/复习册'
+export type PdfJobType =
+  | '全班易错题单'
+  | '个人历史错题'
+  | '个人错题变体'
+  | '个人历史错题/错题变体'
+  | '个人练习册'
+  | '个人复习册'
+  | '个人练习册/复习册'
 
 export type PdfJob = {
   id: Id

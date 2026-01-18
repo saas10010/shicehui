@@ -60,26 +60,26 @@ function labelForRange(range: DateRangePreset, start: string, end: string) {
   return start && end ? `自定义：${start} ~ ${end}` : '自定义'
 }
 
-type PersonalDocKind = 'practice' | 'review'
+type PersonalDocKind = 'history' | 'variant'
 
 function defaultRangeForPersonalDoc(kind: PersonalDocKind): DateRangePreset {
-  return kind === 'practice' ? '7d' : '30d'
+  return kind === 'variant' ? '7d' : '30d'
 }
 
 function outlineForPersonalDoc(kind: PersonalDocKind): string[] {
-  if (kind === 'practice') {
+  if (kind === 'history') {
     return [
-      '最近错题的同类题巩固（按知识点分组）',
-      '分层递进：基础题 → 变式题 → 提升题',
-      '每题附「易错提醒」与「纠错要点」',
-      '末尾 1 页「本周薄弱点清单」',
+      '按时间范围汇总历史错题（按知识点分组）',
+      '每题附「错因标签」与「纠错要点」',
+      '高频错因排行榜（错因 → 对策）',
+      '末尾 1 页「薄弱点清单」',
     ]
   }
   return [
-    '阶段核心知识点清单（按单元/章节）',
-    '高频错因总结（错因 → 对策）',
-    '易错题回顾 + 关键题型混合练习',
-    '复习计划建议（每日 20-30 分钟）',
+    '基于错题生成变式题（同考点/同方法）',
+    '难度分层：基础变式 → 进阶变式 → 拔高变式',
+    '每题附「易错提醒」与「关键步骤」',
+    '末尾 1 页「建议练习顺序」',
   ]
 }
 
@@ -185,7 +185,7 @@ export function MaterialsCenter({
         <BrutalCard className="p-5">
           <h1 className="text-2xl font-black">题单与册子</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            把学情数据转化为可交付物：全班题单/个人练习册/复习册（FR11/FR12）。
+            把学情数据转化为可交付物：全班题单/个人历史错题/错题变体（FR11/FR12）。
           </p>
         </BrutalCard>
       )}
@@ -290,38 +290,38 @@ export function MaterialsCenter({
 
         <TabsContent value="personal">
           <BrutalCard className="mt-4 p-5 space-y-4">
-            <div className="text-lg font-black">生成个人练习册 / 复习册</div>
+            <div className="text-lg font-black">生成个人历史错题 / 错题变体</div>
 
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant={personalDocKind === 'practice' ? 'default' : 'outline'}
+                variant={personalDocKind === 'history' ? 'default' : 'outline'}
                 className={
-                  personalDocKind === 'practice'
+                  personalDocKind === 'history'
                     ? 'rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                     : 'rounded-xl border-2 border-black font-bold'
                 }
-                onClick={() => setPersonalDocKind('practice')}
+                onClick={() => setPersonalDocKind('history')}
               >
-                个人练习册
+                个人历史错题
               </Button>
               <Button
                 type="button"
-                variant={personalDocKind === 'review' ? 'default' : 'outline'}
+                variant={personalDocKind === 'variant' ? 'default' : 'outline'}
                 className={
-                  personalDocKind === 'review'
+                  personalDocKind === 'variant'
                     ? 'rounded-xl border-2 border-black font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                     : 'rounded-xl border-2 border-black font-bold'
                 }
-                onClick={() => setPersonalDocKind('review')}
+                onClick={() => setPersonalDocKind('variant')}
               >
-                个人复习册
+                个人错题变体
               </Button>
             </div>
 
             <div className="rounded-xl border-2 border-black bg-white/70 p-4">
               <div className="text-sm font-black">
-                {personalDocKind === 'practice' ? '练习册：巩固近期薄弱点' : '复习册：阶段回顾与串联复现'}
+                {personalDocKind === 'history' ? '历史错题：按知识点回顾与纠错' : '错题变体：同考点变式练习'}
               </div>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                 {outlineForPersonalDoc(personalDocKind).map((item) => (
@@ -329,7 +329,7 @@ export function MaterialsCenter({
                 ))}
               </ul>
               <div className="mt-2 text-xs text-muted-foreground">
-                默认时间范围：{personalDocKind === 'practice' ? '最近7天' : '最近30天'}（可手动调整）
+                默认时间范围：{personalDocKind === 'variant' ? '最近7天' : '最近30天'}（可手动调整）
               </div>
             </div>
 
@@ -411,7 +411,7 @@ export function MaterialsCenter({
                   toast.error('请选择学生')
                   return
                 }
-                const type: PdfJobType = personalDocKind === 'practice' ? '个人练习册' : '个人复习册'
+                const type: PdfJobType = personalDocKind === 'variant' ? '个人错题变体' : '个人历史错题'
                 createJob(type, studentJobLabel, outlineForPersonalDoc(personalDocKind))
               }}
             >

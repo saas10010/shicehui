@@ -59,15 +59,8 @@ export function ResultDetail({
 
       <WechatCard>
         <WechatCell
-          title="去练习任务"
-          description="领取/作答/提交（学生端）"
-          right={<WechatTag tone="success">行动</WechatTag>}
-          href={`/mini/ps/tasks?role=${role}`}
-        />
-        <WechatDivider />
-        <WechatCell
           title="去资料下载"
-          description="下载练习册/复习册（家长端）"
+          description="下载历史错题/错题变体（家长端）"
           right={<WechatTag tone="success">行动</WechatTag>}
           href={`/mini/ps/materials?role=${role}`}
         />

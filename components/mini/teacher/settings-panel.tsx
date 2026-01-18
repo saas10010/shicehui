@@ -74,13 +74,12 @@ export function MiniSettingsPanel() {
       <WechatCard>
         <WechatCell
           title="清理本地缓存（原型）"
-          description="清理队列/资料生成记录/练习任务等本地数据"
+          description="清理队列/资料生成记录等本地数据"
           onClick={() => {
             const confirmed = window.confirm('确认清理本地缓存？该操作仅影响当前浏览器的原型数据。')
             if (!confirmed) return
             safeRemove(MINI_QUEUE_STORAGE_KEY)
             safeRemove('shicehui:pdfJobs')
-            safeRemove('shicehui:tasks')
             toast.success('已清理本地缓存（原型）')
           }}
           right={<WechatTag tone="warning">谨慎</WechatTag>}
