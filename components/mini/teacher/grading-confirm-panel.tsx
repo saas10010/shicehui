@@ -64,10 +64,6 @@ function safeWriteGradingConfirmed(batchId: string, ids: Set<string>) {
 
 type DraftUIStatus = '处理中' | '生成中' | '可确认'
 
-type DraftEdits = {
-  comment: string
-}
-
 function statusTone(status: DraftUIStatus | '已确认') {
   if (status === '已确认') return 'success'
   if (status === '可确认') return 'success'
@@ -102,10 +98,6 @@ export function MiniGradingConfirmPanel({
     return firstPending || items[0]?.studentId || ''
   })
 
-  const draftEditsRef = React.useRef<Record<string, DraftEdits>>({})
-  const prevActiveStudentIdRef = React.useRef<string | null>(null)
-
-  const [comment, setComment] = React.useState('')
   const [activeEvidenceIndex, setActiveEvidenceIndex] = React.useState(0)
   const touchStartXRef = React.useRef<number | null>(null)
 
@@ -177,25 +169,6 @@ export function MiniGradingConfirmPanel({
       generationTimersRef.current = {}
     }
   }, [batchId])
-
-  React.useEffect(() => {
-    // 在切换学生前保存当前编辑
-    const prevId = prevActiveStudentIdRef.current
-    if (prevId) {
-      draftEditsRef.current[prevId] = { comment }
-    }
-
-    if (activeStudentId) {
-      const saved = draftEditsRef.current[activeStudentId]
-      if (saved) {
-        setComment(saved.comment)
-      } else {
-        setComment('')
-      }
-    }
-
-    prevActiveStudentIdRef.current = activeStudentId || null
-  }, [activeStudentId])
 
   React.useEffect(() => {
     setActiveEvidenceIndex(0)
@@ -330,7 +303,6 @@ export function MiniGradingConfirmPanel({
     if (activeIsConfirmed) return
     if (activeDraftStatus !== '可确认') return
 
-    draftEditsRef.current[activeStudentId] = { comment }
     setConfirmedStudentIds((prev) => {
       const next = new Set(prev)
       next.add(activeStudentId)
@@ -366,32 +338,11 @@ export function MiniGradingConfirmPanel({
             </div>
           </div>
           <WechatTag tone={statusTone(activeFinalStatus)}>{activeFinalStatus}</WechatTag>
-        </div>
+	        </div>
 
-        {items.length > 0 ? (
-          <div className="mt-3">
-            <div className="text-xs text-black/50">切换学生（可选）</div>
-            <select
-              value={activeStudentId}
-              onChange={(e) => setActiveStudentId(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-            >
-              {items.map((i) => {
-                const isConfirmed = confirmedStudentIds.has(i.studentId)
-                const status = isConfirmed ? '已确认' : getStudentDraftStatus(i)
-                return (
-                  <option key={i.studentId} value={i.studentId}>
-                    {i.studentName}（{status}）
-                  </option>
-                )
-              })}
-            </select>
-          </div>
-        ) : null}
-
-        <div className="mt-3">
-          <Link
-            href={`/mini/teacher/classes/${classId}/batches/${batchId}`}
+	        <div className="mt-3">
+	          <Link
+	            href={`/mini/teacher/classes/${classId}/batches/${batchId}`}
             className="text-sm text-[#07c160]"
           >
             ← 返回批次详情
@@ -403,13 +354,34 @@ export function MiniGradingConfirmPanel({
         <WechatCard className="p-6 text-center">
           <div className="text-sm text-black/50">暂无可批改的学生</div>
         </WechatCard>
-      ) : (
-        <div className="space-y-4">
-          <WechatCard className="p-4 space-y-2">
-            <div className="text-sm font-medium text-black">证据（示例：在图片里直接画 ✓/✗）</div>
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-black/50">
-                {activeEvidencePage ? `${activeEvidencePage.label}（${activeEvidenceIndex + 1}/${evidencePages.length}）` : '—'}
+	      ) : (
+	        <div className="space-y-4">
+	          <WechatCard className="p-4 space-y-2">
+	            {items.length > 0 ? (
+	              <div className="space-y-2">
+	                <div className="text-xs text-black/50">切换学生（可选）</div>
+	                <select
+	                  value={activeStudentId}
+	                  onChange={(e) => setActiveStudentId(e.target.value)}
+	                  className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+	                >
+	                  {items.map((i) => {
+	                    const isConfirmed = confirmedStudentIds.has(i.studentId)
+	                    const status = isConfirmed ? '已确认' : getStudentDraftStatus(i)
+	                    return (
+	                      <option key={i.studentId} value={i.studentId}>
+	                        {i.studentName}（{status}）
+	                      </option>
+	                    )
+	                  })}
+	                </select>
+	              </div>
+	            ) : null}
+
+	            <div className="text-sm font-medium text-black">证据（示例：在图片里直接画 ✓/✗）</div>
+	            <div className="flex items-center justify-between gap-2">
+	              <div className="text-xs text-black/50">
+	                {activeEvidencePage ? `${activeEvidencePage.label}（${activeEvidenceIndex + 1}/${evidencePages.length}）` : '—'}
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -506,69 +478,53 @@ export function MiniGradingConfirmPanel({
             <div className="text-xs text-black/50">
               左右滑动或点“上一张/下一张”切换（示例）。真实系统可在图上展示题目框、对错标记与溯源信息。
             </div>
-          </WechatCard>
 
-          <WechatCard className="p-4 space-y-3">
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-black">备注/订正点（可选）</div>
-              <textarea
-                value={comment}
-                disabled={activeIsConfirmed}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="例如：第3题移项要变号。"
-                className="min-h-16 w-full resize-none rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
-              />
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+                onClick={() => {
+                  if (!activeStudentId) return
+                  setConfirmedStudentIds((prev) => {
+                    const next = new Set(prev)
+                    next.delete(activeStudentId)
+                    safeWriteGradingConfirmed(batchId, next)
+                    return next
+                  })
+                  triggerDraftRegenerate(activeStudentId)
+                  toast.success('已触发重新识别，正在生成（原型）')
+                }}
+              >
+                重新识别
+              </button>
+              <button
+                type="button"
+                className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
+                disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
+                onClick={() => confirmActiveAndGoNext()}
+              >
+                {activeIsConfirmed ? '已确认' : activeDraftStatus !== '可确认' ? '等待生成' : '确认并下一位'}
+              </button>
             </div>
 
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-                  onClick={() => {
-                    if (!activeStudentId) return
-                    setConfirmedStudentIds((prev) => {
-                      const next = new Set(prev)
-                      next.delete(activeStudentId)
-                      safeWriteGradingConfirmed(batchId, next)
-                      return next
-                    })
-                    triggerDraftRegenerate(activeStudentId)
-                    setComment('')
-                    toast.success('已触发重新识别，正在生成（原型）')
-                  }}
-                >
-                  重新识别
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
-                  disabled={activeIsConfirmed || activeDraftStatus !== '可确认'}
-                  onClick={() => confirmActiveAndGoNext()}
-                >
-                  {activeIsConfirmed ? '已确认' : activeDraftStatus !== '可确认' ? '等待生成' : '确认并下一位'}
-                </button>
-              </div>
-
-              {activeIsConfirmed ? (
-                <button
-                  type="button"
-                  className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-                  onClick={() => {
-                    if (!activeStudentId) return
-                    setConfirmedStudentIds((prev) => {
-                      const next = new Set(prev)
-                      next.delete(activeStudentId)
-                      safeWriteGradingConfirmed(batchId, next)
-                      return next
-                    })
-                    toast.message('已撤销确认，可继续处理（原型）')
-                  }}
-                >
-                  撤销确认
-                </button>
-              ) : null}
-            </div>
+            {activeIsConfirmed ? (
+              <button
+                type="button"
+                className="w-full rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+                onClick={() => {
+                  if (!activeStudentId) return
+                  setConfirmedStudentIds((prev) => {
+                    const next = new Set(prev)
+                    next.delete(activeStudentId)
+                    safeWriteGradingConfirmed(batchId, next)
+                    return next
+                  })
+                  toast.message('已撤销确认，可继续处理（原型）')
+                }}
+              >
+                撤销确认
+              </button>
+            ) : null}
           </WechatCard>
         </div>
       )}
