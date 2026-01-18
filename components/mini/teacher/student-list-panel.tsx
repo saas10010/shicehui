@@ -33,7 +33,7 @@ export function StudentListPanel({
           <div>
             <div className="text-sm font-medium text-black">学生列表</div>
             <div className="mt-1 text-xs text-black/50">
-              支持搜索；点击学生进入档案。当前：{students.length} 人
+              支持搜索；点击学生查看“学生数据”。当前：{students.length} 人
             </div>
           </div>
           <WechatTag tone="default">原型</WechatTag>
@@ -63,7 +63,7 @@ export function StudentListPanel({
           <React.Fragment key={s.id}>
             <WechatCell
               title={`${s.name}（#${s.code}）`}
-              href={`/mini/teacher/students/${s.id}?classId=${encodeURIComponent(classId)}`}
+              href={`/mini/teacher/data?classId=${encodeURIComponent(classId)}&tab=student&studentId=${encodeURIComponent(s.id)}`}
             />
             {idx === filtered.length - 1 ? null : <WechatDivider />}
           </React.Fragment>
