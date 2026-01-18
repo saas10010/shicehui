@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { useSearchParams } from 'next/navigation'
 
 import type { BatchStudentItem } from '@/lib/mock/types'
-import { WechatCard, WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-shell'
+import { WechatCard, WechatTag } from '@/components/mini/wechat-shell'
 
 type DraftGenerationRecord = Record<string, { readyAt: number }>
 
@@ -106,6 +106,7 @@ export function MiniGradingConfirmPanel({
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
   const [comment, setComment] = React.useState('')
+  const [previewPageId, setPreviewPageId] = React.useState<string | null>(null)
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
 
@@ -195,6 +196,10 @@ export function MiniGradingConfirmPanel({
     prevActiveStudentIdRef.current = activeStudentId || null
   }, [activeStudentId])
 
+  React.useEffect(() => {
+    setPreviewPageId(null)
+  }, [activeStudentId])
+
   const findNextStudentId = React.useCallback(
     (currentId: string, opts?: { includeNotReady?: boolean }) => {
       const includeNotReady = Boolean(opts?.includeNotReady)
@@ -262,12 +267,37 @@ export function MiniGradingConfirmPanel({
 
   const evidenceMarks = React.useMemo(() => {
     const seed = activeStudentId.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
-    return evidencePages.map((p, idx) => {
-      const v = (seed + idx) % 5
-      const mark: '对' | '错' = v === 0 ? '错' : '对'
-      return { id: p.id, mark }
+    return evidencePages.map((p, pageIdx) => {
+      const anchors = [
+        { xPct: 18, yPct: 22 },
+        { xPct: 26, yPct: 46 },
+        { xPct: 20, yPct: 70 },
+      ]
+      const count = 2 + ((seed + pageIdx) % 2) // 2~3 个标注点（示例）
+      const marks = Array.from({ length: count }, (_, idx) => {
+        const a = anchors[idx] ?? anchors[0]
+        const isWrong = (seed + pageIdx * 7 + idx * 3) % 5 === 0
+        return {
+          id: `${p.id}-m${idx + 1}`,
+          xPct: a.xPct,
+          yPct: a.yPct,
+          kind: isWrong ? ('wrong' as const) : ('right' as const),
+          rotateDeg: (seed + pageIdx * 11 + idx * 5) % 21 - 10, // -10~10 随机倾斜一点，更像手写
+        }
+      })
+      return { pageId: p.id, marks }
     })
   }, [activeStudentId, evidencePages])
+
+  const previewPage = React.useMemo(() => {
+    if (!previewPageId) return null
+    return evidencePages.find((p) => p.id === previewPageId) ?? null
+  }, [evidencePages, previewPageId])
+
+  const previewMarks = React.useMemo(() => {
+    if (!previewPageId) return []
+    return evidenceMarks.find((m) => m.pageId === previewPageId)?.marks ?? []
+  }, [evidenceMarks, previewPageId])
 
   function confirmActiveAndMaybeNext(behavior: 'stay' | 'next') {
     if (!activeStudentId) return
@@ -305,7 +335,7 @@ export function MiniGradingConfirmPanel({
           <div>
             <div className="text-sm font-medium text-black">批改确认</div>
             <div className="mt-1 text-xs text-black/50">
-              证据图上直接显示对/错（示例）。点“确认并下一位”即可连续处理。
+              对/错直接画在作业图片上（示例）。点“确认并下一位”即可连续处理。
             </div>
             <div className="mt-2 text-xs text-black/50">
               进度：已确认 {confirmedCount}/{items.length} · 待确认 {pendingCount} · 当前可确认 {canConfirmCount}
@@ -354,35 +384,78 @@ export function MiniGradingConfirmPanel({
         </WechatCard>
       ) : (
         <div className="space-y-4">
-	          <WechatCard className="p-4 space-y-2">
-	            <div className="text-sm font-medium text-black">证据（示例：对/错直接叠在图上）</div>
-	            <div className="grid grid-cols-3 gap-2">
-	              {evidencePages.map((p, idx) => {
-	                const mark = evidenceMarks[idx]?.mark ?? '对'
-	                const isWrong = mark === '错'
-	                return (
-	                  <a
-	                    key={p.id}
-	                    href={p.src}
-	                    target="_blank"
-	                    rel="noreferrer"
-	                    className="rounded-xl border border-black/10 bg-white p-2 text-center text-xs text-black/60 active:bg-black/5"
-	                  >
-	                    <div className="relative">
-	                      <img src={p.src} alt={p.label} className="mx-auto h-16 w-full rounded-lg object-cover" />
-	                      <div
-	                        className={`absolute left-1 top-1 rounded-full px-2 py-0.5 text-[10px] font-semibold text-white ${isWrong ? 'bg-red-500' : 'bg-emerald-500'}`}
-	                      >
-	                        {isWrong ? '错' : '对'}
-	                      </div>
-	                    </div>
-	                    <div className="mt-1">{p.label}</div>
-	                  </a>
-	                )
-	              })}
-	            </div>
+          <WechatCard className="p-4 space-y-2">
+            <div className="text-sm font-medium text-black">证据（示例：在图片里直接画 ✓/✗）</div>
+            <div className="grid grid-cols-3 gap-2">
+              {evidencePages.map((p) => {
+                const marks = evidenceMarks.find((m) => m.pageId === p.id)?.marks ?? []
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className="rounded-xl border border-black/10 bg-white p-2 text-center text-xs text-black/60 active:bg-black/5"
+                    onClick={() => setPreviewPageId(p.id)}
+                  >
+                    <div className="relative overflow-hidden">
+                      <img src={p.src} alt={p.label} className="mx-auto h-16 w-full rounded-lg object-cover" />
+                      <div className="pointer-events-none absolute inset-0 z-10">
+                        {marks.map((m) => {
+                          const isWrong = m.kind === 'wrong'
+                          return (
+                            <div
+                              key={m.id}
+                              className="absolute"
+                              style={{
+                                left: `${m.xPct}%`,
+                                top: `${m.yPct}%`,
+                                transform: `rotate(${m.rotateDeg}deg)`,
+                              }}
+                            >
+                              <svg
+                                aria-hidden="true"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                className="drop-shadow-[0_1px_0_rgba(0,0,0,0.2)]"
+                              >
+                                {isWrong ? (
+                                  <>
+                                    <path
+                                      d="M6 6 L18 18"
+                                      stroke="rgba(239, 68, 68, 0.95)"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                    />
+                                    <path
+                                      d="M18 6 L6 18"
+                                      stroke="rgba(239, 68, 68, 0.95)"
+                                      strokeWidth="3"
+                                      strokeLinecap="round"
+                                    />
+                                  </>
+                                ) : (
+                                  <path
+                                    d="M5 13 L10 18 L19 7"
+                                    stroke="rgba(16, 185, 129, 0.95)"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    fill="none"
+                                  />
+                                )}
+                              </svg>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div className="mt-1">{p.label}</div>
+                  </button>
+                )
+              })}
+            </div>
             <div className="text-xs text-black/50">
-              点击图片可查看大图（示例）。真实系统可在大图内展示题目框、对错标记与溯源信息。
+              点任意图片可查看大图（示例）。真实系统可在大图内展示题目框、对错标记与溯源信息。
             </div>
           </WechatCard>
 
@@ -459,6 +532,76 @@ export function MiniGradingConfirmPanel({
           </WechatCard>
         </div>
       )}
+
+      {previewPage ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-3">
+            <div className="flex items-center justify-between gap-3 px-1 py-1">
+              <div className="text-sm font-semibold text-black">大图预览：{previewPage.label}</div>
+              <button
+                type="button"
+                className="rounded-full bg-black/5 px-3 py-1 text-sm font-semibold text-black active:bg-black/10"
+                onClick={() => setPreviewPageId(null)}
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="mt-2">
+              <div className="relative overflow-hidden rounded-xl border border-black/10 bg-white">
+                <img src={previewPage.src} alt={previewPage.label} className="block h-auto w-full object-contain" />
+                <div className="pointer-events-none absolute inset-0">
+                  {previewMarks.map((m) => {
+                    const isWrong = m.kind === 'wrong'
+                    return (
+                      <div
+                        key={m.id}
+                        className="absolute"
+                        style={{
+                          left: `${m.xPct}%`,
+                          top: `${m.yPct}%`,
+                          transform: `rotate(${m.rotateDeg}deg)`,
+                        }}
+                      >
+                        <svg aria-hidden="true" width="44" height="44" viewBox="0 0 24 24">
+                          {isWrong ? (
+                            <>
+                              <path
+                                d="M6 6 L18 18"
+                                stroke="rgba(239, 68, 68, 0.95)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                              />
+                              <path
+                                d="M18 6 L6 18"
+                                stroke="rgba(239, 68, 68, 0.95)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                              />
+                            </>
+                          ) : (
+                            <path
+                              d="M5 13 L10 18 L19 7"
+                              stroke="rgba(16, 185, 129, 0.95)"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          )}
+                        </svg>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-black/50">
+                标注为示例叠加（原型）。真实系统应由识别定位结果驱动。
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
