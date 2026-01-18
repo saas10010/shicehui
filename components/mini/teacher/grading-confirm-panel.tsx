@@ -106,7 +106,6 @@ export function MiniGradingConfirmPanel({
   const prevActiveStudentIdRef = React.useRef<string | null>(null)
 
   const [comment, setComment] = React.useState('')
-  const [hideConfirmed, setHideConfirmed] = React.useState(true)
 
   const active = items.find((i) => i.studentId === activeStudentId) ?? null
 
@@ -223,14 +222,6 @@ export function MiniGradingConfirmPanel({
     [confirmedStudentIds, getStudentDraftStatus, items],
   )
 
-  React.useEffect(() => {
-    if (!activeStudentId) return
-    if (!hideConfirmed) return
-    if (!confirmedStudentIds.has(activeStudentId)) return
-    const nextId = findNextStudentId(activeStudentId, { includeNotReady: true })
-    if (nextId && nextId !== activeStudentId) setActiveStudentId(nextId)
-  }, [activeStudentId, confirmedStudentIds, findNextStudentId, hideConfirmed])
-
   function triggerDraftRegenerate(studentId: string) {
     const now = Date.now()
     const delay = 1200 + Math.floor(Math.random() * 800)
@@ -258,11 +249,6 @@ export function MiniGradingConfirmPanel({
   const activeDraftStatus: DraftUIStatus = active ? getStudentDraftStatus(active) : '处理中'
   const activeIsConfirmed = Boolean(active && confirmedStudentIds.has(active.studentId))
   const activeFinalStatus: DraftUIStatus | '已确认' = activeIsConfirmed ? '已确认' : activeDraftStatus
-
-  const visibleItems = React.useMemo(() => {
-    if (!hideConfirmed) return items
-    return items.filter((i) => !confirmedStudentIds.has(i.studentId))
-  }, [confirmedStudentIds, hideConfirmed, items])
 
   const evidencePages = React.useMemo(() => {
     const base = ['/evidence/page-1.svg', '/evidence/page-2.svg', '/evidence/page-3.svg']
@@ -324,9 +310,33 @@ export function MiniGradingConfirmPanel({
             <div className="mt-2 text-xs text-black/50">
               进度：已确认 {confirmedCount}/{items.length} · 待确认 {pendingCount} · 当前可确认 {canConfirmCount}
             </div>
+            <div className="mt-2 text-xs text-black/60">
+              当前：{active ? `${active.studentName} · 作业张数：${active.imageCount}` : '—'}
+            </div>
           </div>
           <WechatTag tone={statusTone(activeFinalStatus)}>{activeFinalStatus}</WechatTag>
         </div>
+
+        {items.length > 0 ? (
+          <div className="mt-3">
+            <div className="text-xs text-black/50">切换学生（可选）</div>
+            <select
+              value={activeStudentId}
+              onChange={(e) => setActiveStudentId(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+            >
+              {items.map((i) => {
+                const isConfirmed = confirmedStudentIds.has(i.studentId)
+                const status = isConfirmed ? '已确认' : getStudentDraftStatus(i)
+                return (
+                  <option key={i.studentId} value={i.studentId}>
+                    {i.studentName}（{status}）
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+        ) : null}
 
         <div className="mt-3">
           <Link
@@ -336,39 +346,6 @@ export function MiniGradingConfirmPanel({
             ← 返回批次详情
           </Link>
         </div>
-      </WechatCard>
-
-      <WechatCard className="p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-black/50">学生列表</div>
-          <button
-            type="button"
-            className="text-xs font-medium text-[#07c160]"
-            onClick={() => setHideConfirmed((v) => !v)}
-          >
-            {hideConfirmed ? '显示已确认' : '只看待确认'}
-          </button>
-        </div>
-      </WechatCard>
-
-      <WechatCard>
-        {visibleItems.map((i, idx) => {
-          const isActive = i.studentId === activeStudentId
-          const isConfirmed = confirmedStudentIds.has(i.studentId)
-          const draftStatus = getStudentDraftStatus(i)
-          const displayStatus: DraftUIStatus | '已确认' = isConfirmed ? '已确认' : draftStatus
-          return (
-            <React.Fragment key={i.studentId}>
-              <WechatCell
-                title={`${i.studentName}${isActive ? '（当前）' : ''}`}
-                description={`作业张数：${i.imageCount}`}
-                right={<WechatTag tone={statusTone(displayStatus)}>{displayStatus}</WechatTag>}
-                onClick={() => setActiveStudentId(i.studentId)}
-              />
-              {idx === visibleItems.length - 1 ? null : <WechatDivider />}
-            </React.Fragment>
-          )
-        })}
       </WechatCard>
 
       {!active ? (
