@@ -3,7 +3,6 @@ export type MiniQueueStatus =
   | 'uploading'
   | 'success'
   | 'failed'
-  | 'offline'
 
 export type MiniQueueItem = {
   id: string
@@ -24,8 +23,47 @@ export function nowLabel() {
 export function safeParseQueue(raw: string | null): MiniQueueItem[] {
   if (!raw) return []
   try {
-    const parsed = JSON.parse(raw) as MiniQueueItem[]
-    return Array.isArray(parsed) ? parsed : []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null
+        const candidate = item as Record<string, unknown>
+
+        const id = candidate.id
+        const createdAt = candidate.createdAt
+        if (typeof id !== 'string' || typeof createdAt !== 'string') return null
+
+        const statusRaw = candidate.status
+        const status: MiniQueueStatus =
+          statusRaw === 'pending' ||
+          statusRaw === 'uploading' ||
+          statusRaw === 'success' ||
+          statusRaw === 'failed'
+            ? statusRaw
+            : 'pending'
+
+        const progressRaw = candidate.progress
+        const progressNumber =
+          typeof progressRaw === 'number' && Number.isFinite(progressRaw)
+            ? progressRaw
+            : 0
+        const progress = Math.max(0, Math.min(100, progressNumber))
+
+        const errorMessageRaw = candidate.errorMessage
+        const errorMessage =
+          typeof errorMessageRaw === 'string' ? errorMessageRaw : undefined
+
+        return {
+          id,
+          createdAt,
+          status,
+          progress,
+          ...(errorMessage ? { errorMessage } : {}),
+        } satisfies MiniQueueItem
+      })
+      .filter((i): i is MiniQueueItem => i !== null)
   } catch {
     return []
   }
@@ -37,4 +75,3 @@ export function shouldFail(id: string) {
   const n = Number.parseInt(last, 16)
   return Number.isFinite(n) ? n % 7 === 0 : false
 }
-

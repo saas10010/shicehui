@@ -17,6 +17,8 @@ export function MiniReinforcePanel({
 
     const classIdFromQuery = searchParams.get('classId') ?? ''
     const studentIdFromQuery = searchParams.get('studentId') ?? ''
+    const effectiveDefaultStudentId = studentIdFromQuery || defaultStudentId || undefined
+    const defaultMode = studentIdFromQuery ? 'personal' : 'class'
     const backHref = studentIdFromQuery
       ? `/mini/teacher/students/${encodeURIComponent(studentIdFromQuery)}${classIdFromQuery ? `?classId=${encodeURIComponent(classIdFromQuery)}` : ''}`
       : classIdFromQuery
@@ -50,7 +52,11 @@ export function MiniReinforcePanel({
         </div>
       </div>
       <WechatDivider />
-      <MiniMaterialsPanel defaultStudentId={defaultStudentId} />
+      <MiniMaterialsPanel
+        defaultClassId={classIdFromQuery || undefined}
+        defaultStudentId={effectiveDefaultStudentId}
+        defaultMode={defaultMode}
+      />
     </WechatCard>
   )
 }

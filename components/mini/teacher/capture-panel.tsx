@@ -17,7 +17,6 @@ function saveQueue(items: MiniQueueItem[]) {
 
 export function CapturePanel() {
   const router = useRouter()
-  const [offline, setOffline] = React.useState(false)
   const [count, setCount] = React.useState(0)
   const [preview, setPreview] = React.useState<MiniQueueItem[]>([])
 
@@ -29,29 +28,28 @@ export function CapturePanel() {
 
   return (
     <div className="space-y-4">
-      <WechatCard className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-base font-semibold text-black">连拍采集</div>
-            <div className="mt-1 text-xs text-black/50">
+      <WechatCard>
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-base font-semibold text-black">连拍采集</div>
+              <div className="mt-1 text-xs text-black/50">
               取景框提示：作业本的姓名/学号需入镜；拍摄后进入上传队列。
             </div>
           </div>
-          <WechatTag tone={offline ? 'warning' : 'success'}>
-            {offline ? '离线暂存' : '在线'}
-          </WechatTag>
-        </div>
+          <WechatTag tone="success">在线</WechatTag>
+          </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <button
-            type="button"
+          <div className="mt-4 grid grid-cols-1 gap-3">
+            <button
+              type="button"
             className="rounded-xl bg-[#07c160] px-4 py-3 text-center text-sm font-semibold text-white active:opacity-90"
             onClick={() => {
               const id = `q-${Date.now().toString(16)}`
               const newItem: MiniQueueItem = {
                 id,
                 createdAt: nowLabel(),
-                status: offline ? 'offline' : 'pending',
+                status: 'pending',
                 progress: 0,
               }
               const items = safeParseQueue(
@@ -64,22 +62,15 @@ export function CapturePanel() {
             }}
           >
             拍摄一张（模拟）
-          </button>
-          <button
-            type="button"
-            className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-            onClick={() => setOffline((v) => !v)}
-          >
-            {offline ? '切回在线' : '切到离线'}
-          </button>
+            </button>
+          </div>
+
+          <div className="mt-3 text-xs text-black/50">
+            已拍：{count} 张 · 拍摄后进入上传队列，可查看进度与重试。
+          </div>
         </div>
 
-        <div className="mt-3 text-xs text-black/50">
-          已拍：{count} 张 · 弱网/断网时会提示“离线暂存中”，网络恢复后可续传。
-        </div>
-      </WechatCard>
-
-      <WechatCard>
+        <WechatDivider />
         <WechatCell
           title="上传队列"
           description="查看上传进度、失败原因与重试"
@@ -92,9 +83,8 @@ export function CapturePanel() {
           description="尽量让姓名/学号清晰入镜；缺失/冲突会进入异常池"
           right={<WechatTag tone="default">提示</WechatTag>}
         />
-      </WechatCard>
+        <WechatDivider />
 
-      <WechatCard>
         <div className="px-4 py-3">
           <div className="text-sm font-medium text-black">最近拍摄（预览）</div>
           <div className="mt-2 space-y-2">
@@ -111,18 +101,20 @@ export function CapturePanel() {
                 </div>
                 <WechatTag
                   tone={
-                    p.status === 'offline'
-                      ? 'warning'
-                      : p.status === 'pending'
-                        ? 'default'
-                        : 'success'
+                    p.status === 'success'
+                      ? 'success'
+                      : p.status === 'failed'
+                        ? 'danger'
+                        : 'default'
                   }
                 >
-                  {p.status === 'offline'
-                    ? '离线'
-                    : p.status === 'pending'
-                      ? '待上传'
-                      : p.status}
+                  {p.status === 'pending'
+                    ? '待上传'
+                    : p.status === 'uploading'
+                      ? '上传中'
+                      : p.status === 'success'
+                        ? '成功'
+                        : '失败'}
                 </WechatTag>
               </div>
             ))}

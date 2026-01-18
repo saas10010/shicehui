@@ -6,8 +6,8 @@ export default function TeacherClassesPage() {
   const classes = getClasses()
 
   return (
-    <div className="space-y-4">
-      <WechatCard className="p-4">
+    <div>
+      <WechatCard className="p-0">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-sm font-medium text-black">班级</div>
@@ -17,11 +17,11 @@ export default function TeacherClassesPage() {
           </div>
           <WechatTag tone="success">已迁移</WechatTag>
         </div>
-      </WechatCard>
+        <WechatDivider />
 
-      <MiniClassActionsPanel />
+        <MiniClassActionsPanel embedded />
+        <WechatDivider />
 
-      <WechatCard>
         {classes.map((c, idx) => (
           <div key={c.id}>
             <WechatCell

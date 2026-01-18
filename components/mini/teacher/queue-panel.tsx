@@ -23,14 +23,12 @@ function labelOf(status: MiniQueueItem['status']) {
   if (status === 'pending') return '待上传'
   if (status === 'uploading') return '上传中'
   if (status === 'success') return '成功'
-  if (status === 'failed') return '失败'
-  return '离线暂存'
+  return '失败'
 }
 
 function toneOf(status: MiniQueueItem['status']) {
   if (status === 'success') return 'success'
   if (status === 'failed') return 'danger'
-  if (status === 'offline') return 'warning'
   return 'default'
 }
 
@@ -72,12 +70,6 @@ export function QueuePanel() {
     }, 1200)
   }
 
-  const resumeOffline = () => {
-    update((prev) =>
-      prev.map((i) => (i.status === 'offline' ? { ...i, status: 'pending' } : i)),
-    )
-  }
-
   const retryFailed = () => {
     update((prev) =>
       prev.map((i) =>
@@ -97,7 +89,7 @@ export function QueuePanel() {
       <WechatCard className="p-4">
         <div className="text-sm font-medium text-black">上传队列</div>
         <div className="mt-1 text-xs text-black/50">
-          状态：待上传 / 上传中 / 成功 / 失败 / 离线暂存；失败可重试，成功可清理。
+          状态：待上传 / 上传中 / 成功 / 失败；失败可重试，成功可清理。
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
@@ -112,14 +104,6 @@ export function QueuePanel() {
           <button
             type="button"
             className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-            onClick={resumeOffline}
-            disabled={!items.some((i) => i.status === 'offline')}
-          >
-            网络恢复（续传）
-          </button>
-          <button
-            type="button"
-            className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
             onClick={retryFailed}
             disabled={!items.some((i) => i.status === 'failed')}
           >
@@ -130,6 +114,7 @@ export function QueuePanel() {
             className="rounded-xl bg-white px-4 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
             onClick={clearSuccess}
             disabled={!items.some((i) => i.status === 'success')}
+            style={{ gridColumn: '1 / -1' }}
           >
             清理成功项
           </button>
@@ -142,7 +127,11 @@ export function QueuePanel() {
             <WechatCell
               title={labelOf(i.status)}
               description={`${i.createdAt} · ${i.id}${i.errorMessage ? ` · ${i.errorMessage}` : ''}`}
-              right={<WechatTag tone={toneOf(i.status)}>{i.status === 'uploading' ? `${i.progress}%` : labelOf(i.status)}</WechatTag>}
+              right={
+                <WechatTag tone={toneOf(i.status)}>
+                  {i.status === 'uploading' ? `${i.progress}%` : labelOf(i.status)}
+                </WechatTag>
+              }
             />
             {idx === items.length - 1 ? null : <WechatDivider />}
           </React.Fragment>
@@ -156,10 +145,9 @@ export function QueuePanel() {
 
       <WechatCard className="p-4">
         <div className="text-xs text-black/50">
-          原型说明：真实小程序需支持相机权限、离线暂存、后台上传、进度与失败原因区分（网络/权限/服务端）。
+          原型说明：真实小程序需支持相机权限、后台上传、进度与失败原因区分（网络/权限/服务端）。
         </div>
       </WechatCard>
     </div>
   )
 }
-

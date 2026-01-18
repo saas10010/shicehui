@@ -10,6 +10,7 @@ import { WechatCell, WechatDivider, WechatTag } from '@/components/mini/wechat-s
 const STORAGE_KEY = 'shicehui:pdfJobs'
 
 type DateRangePreset = '7d' | '30d' | 'all' | 'custom'
+type MaterialsMode = 'class' | 'personal'
 
 function nowLabel() {
   const d = new Date()
@@ -64,17 +65,40 @@ function downloadHrefForJob(job: PdfJob) {
   return `/api/materials/pdf?${params.toString()}`
 }
 
-export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: string }) {
+export function MiniMaterialsPanel({
+  defaultStudentId,
+  defaultClassId,
+  defaultMode,
+}: {
+  defaultStudentId?: string
+  defaultClassId?: string
+  defaultMode?: MaterialsMode
+}) {
   const [jobs, setJobs] = React.useState<PdfJob[]>([])
 
   const [range, setRange] = React.useState<DateRangePreset>('7d')
   const [startDraft, setStartDraft] = React.useState('')
   const [endDraft, setEndDraft] = React.useState('')
 
-  const [selectedClassId, setSelectedClassId] = React.useState(CLASSES[0]?.id ?? '')
+  const lockedClassId = defaultClassId && CLASSES.some((c) => c.id === defaultClassId) ? defaultClassId : ''
+  const isClassLocked = Boolean(lockedClassId)
+
+  const [mode, setMode] = React.useState<MaterialsMode>(() => {
+    if (defaultMode) return defaultMode
+    if (defaultStudentId) return 'personal'
+    return 'class'
+  })
+
+  const [selectedClassId, setSelectedClassId] = React.useState(() => lockedClassId || CLASSES[0]?.id || '')
+
+  const availableStudents = React.useMemo(() => {
+    if (lockedClassId) return STUDENTS.filter((s) => s.classId === lockedClassId)
+    return STUDENTS
+  }, [lockedClassId])
+
   const [selectedStudentId, setSelectedStudentId] = React.useState(() => {
-    if (defaultStudentId && STUDENTS.some((s) => s.id === defaultStudentId)) return defaultStudentId
-    return STUDENTS[0]?.id ?? ''
+    if (defaultStudentId && availableStudents.some((s) => s.id === defaultStudentId)) return defaultStudentId
+    return availableStudents[0]?.id ?? ''
   })
 
   React.useEffect(() => {
@@ -86,10 +110,21 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
   }, [jobs])
 
   React.useEffect(() => {
+    if (!lockedClassId) return
+    setSelectedClassId(lockedClassId)
+  }, [lockedClassId])
+
+  React.useEffect(() => {
+    if (!availableStudents.length) return
+    if (availableStudents.some((s) => s.id === selectedStudentId)) return
+    setSelectedStudentId(availableStudents[0]!.id)
+  }, [availableStudents, selectedStudentId])
+
+  React.useEffect(() => {
     if (!defaultStudentId) return
-    if (!STUDENTS.some((s) => s.id === defaultStudentId)) return
+    if (!availableStudents.some((s) => s.id === defaultStudentId)) return
     setSelectedStudentId(defaultStudentId)
-  }, [defaultStudentId])
+  }, [defaultStudentId, availableStudents])
 
   const ensureCustomDates = () => {
     if (range !== 'custom') return true
@@ -126,10 +161,11 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
   }
 
   const selectedClass = CLASSES.find((c) => c.id === selectedClassId) ?? null
-  const selectedStudent = STUDENTS.find((s) => s.id === selectedStudentId) ?? null
+  const selectedStudent = availableStudents.find((s) => s.id === selectedStudentId) ?? null
   const studentClass = selectedStudent ? CLASSES.find((c) => c.id === selectedStudent.classId) ?? null : null
   const studentLabel = selectedStudent ? `${selectedStudent.name}（#${selectedStudent.code}）` : '未选择学生'
   const studentTargetLabel = studentClass ? `${studentClass.name} · ${studentLabel}` : studentLabel
+  const studentClassLabel = studentClass?.name ?? ''
 
   return (
     <div>
@@ -138,19 +174,40 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
         <div className="mt-1 text-xs text-black/50">
           把学情数据转化为可交付物：全班题单 / 个人历史错题 / 个人错题变体（原型）。
         </div>
+        <div className="mt-3 flex rounded-xl bg-black/5 p-1">
+          <button
+            type="button"
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${mode === 'class' ? 'bg-white text-black shadow-sm' : 'text-black/60'}`}
+            onClick={() => setMode('class')}
+          >
+            全班题单
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${mode === 'personal' ? 'bg-white text-black shadow-sm' : 'text-black/60'}`}
+            onClick={() => setMode('personal')}
+          >
+            个人册子
+          </button>
+        </div>
+        <div className="mt-2 text-xs text-black/50">
+          {mode === 'class' ? '面向全班：选择班级与时间范围。' : '面向个人：选择学生与时间范围。'}
+          {isClassLocked && selectedClass ? `（已锁定：${selectedClass.name}）` : null}
+        </div>
       </div>
       <WechatDivider />
 
       <div className="p-4 space-y-3">
         <div className="text-sm font-medium text-black">生成参数</div>
 
-        <div className="grid grid-cols-2 gap-3">
+        {mode === 'class' ? (
           <div className="space-y-1">
-            <div className="text-xs text-black/60">班级（用于全班题单）</div>
+            <div className="text-xs text-black/60">班级</div>
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
+              disabled={isClassLocked}
+              className={`w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20 ${isClassLocked ? 'opacity-60' : ''}`}
             >
               {CLASSES.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -159,23 +216,27 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
               ))}
             </select>
           </div>
+        ) : (
           <div className="space-y-1">
-            <div className="text-xs text-black/60">学生（用于个人册子）</div>
+            <div className="text-xs text-black/60">学生</div>
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className="w-full rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black outline-none focus:ring-2 focus:ring-[#07c160]/20"
             >
-              {STUDENTS.map((s) => (
+              {availableStudents.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name}（#{s.code}）
+                  {CLASSES.find((c) => c.id === s.classId)?.name ?? '未知班级'} · {s.name}（#{s.code}）
                 </option>
               ))}
             </select>
+            {selectedStudent && studentClassLabel ? (
+              <div className="text-xs text-black/40">所属班级：{studentClassLabel}</div>
+            ) : null}
           </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid gap-3 ${range === 'custom' ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div className="space-y-1">
             <div className="text-xs text-black/60">时间范围</div>
             <select
@@ -221,20 +282,13 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
                 />
               </div>
             </div>
-          ) : (
-            <div className="space-y-1">
-              <div className="text-xs text-black/60">当前范围</div>
-              <div className="rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-black">
-                {labelForRange(range, startDraft, endDraft)}
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        {mode === 'class' ? (
           <button
             type="button"
-            className="rounded-xl bg-[#07c160] px-3 py-3 text-center text-sm font-semibold text-white active:opacity-90"
+            className="w-full rounded-xl bg-[#07c160] px-3 py-3 text-center text-sm font-semibold text-white active:opacity-90"
             onClick={() => {
               if (!selectedClass) {
                 toast.error('请选择班级')
@@ -245,33 +299,36 @@ export function MiniMaterialsPanel({ defaultStudentId }: { defaultStudentId?: st
           >
             生成全班题单
           </button>
-          <button
-            type="button"
-            className="rounded-xl bg-white px-3 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-            onClick={() => {
-              if (!selectedStudent) {
-                toast.error('请选择学生')
-                return
-              }
-              createJob('个人历史错题', studentTargetLabel)
-            }}
-          >
-            生成历史错题
-          </button>
-          <button
-            type="button"
-            className="rounded-xl bg-white px-3 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
-            onClick={() => {
-              if (!selectedStudent) {
-                toast.error('请选择学生')
-                return
-              }
-              createJob('个人错题变体', studentTargetLabel)
-            }}
-          >
-            生成错题变体
-          </button>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              className="rounded-xl bg-white px-3 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+              onClick={() => {
+                if (!selectedStudent) {
+                  toast.error('请选择学生')
+                  return
+                }
+                createJob('个人历史错题', studentTargetLabel)
+              }}
+            >
+              生成历史错题
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-white px-3 py-3 text-center text-sm font-semibold text-black ring-1 ring-black/10 active:bg-black/5"
+              onClick={() => {
+                if (!selectedStudent) {
+                  toast.error('请选择学生')
+                  return
+                }
+                createJob('个人错题变体', studentTargetLabel)
+              }}
+            >
+              生成错题变体
+            </button>
+          </div>
+        )}
       </div>
 
       <WechatDivider />

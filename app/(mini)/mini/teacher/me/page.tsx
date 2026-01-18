@@ -11,24 +11,6 @@ export default function TeacherMePage() {
         />
         <WechatDivider />
         <WechatCell
-          title="作业"
-          description="聚合查看各班批次进度与异常"
-          href="/mini/teacher/homework"
-        />
-        <WechatDivider />
-        <WechatCell
-          title="数据看板"
-          description="题目/知识点排行与样例数据"
-          href="/mini/teacher/data"
-        />
-        <WechatDivider />
-        <WechatCell
-          title="巩固中心"
-          description="题单与册子 / 历史错题 / 错题变体"
-          href="/mini/teacher/reinforce"
-        />
-        <WechatDivider />
-        <WechatCell
           title="设置"
           description="偏好开关与缓存清理（原型）"
           href="/mini/teacher/settings"

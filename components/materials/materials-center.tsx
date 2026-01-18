@@ -106,7 +106,7 @@ export function MaterialsCenter({
     if (defaultStudentId && STUDENTS.some((s) => s.id === defaultStudentId)) return defaultStudentId
     return STUDENTS[0]?.id ?? ''
   })
-  const [personalDocKind, setPersonalDocKind] = React.useState<PersonalDocKind>('practice')
+  const [personalDocKind, setPersonalDocKind] = React.useState<PersonalDocKind>('history')
   const [range, setRange] = React.useState<DateRangePreset>('7d')
   const [startDraft, setStartDraft] = React.useState('')
   const [endDraft, setEndDraft] = React.useState('')
